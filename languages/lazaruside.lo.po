@@ -3879,7 +3879,9 @@ msgid "Session"
 msgstr "ເຊດຊັນ"
 
 #: lazarusidestrconsts.dlgpotitle
-msgid "Title:"
+#, fuzzy
+#| msgid "Title:"
+msgid "Title"
 msgstr "ຫົວຂໍ້:"
 
 #: lazarusidestrconsts.dlgpouiaccess
@@ -9247,19 +9249,24 @@ msgid "Macros"
 msgstr "Macros"
 
 #: lazarusidestrconsts.lisedtexttoolparameters
-msgid "Parameters:"
+#, fuzzy
+#| msgid "Parameters:"
+msgctxt "lazarusidestrconsts.lisedtexttoolparameters"
+msgid "Parameters"
 msgstr "Parameters:"
 
-#: lazarusidestrconsts.lisedtexttoolprogramfilename
-msgid "Program Filename:"
-msgstr "ຊື່ໄຟລ໌ໂປຣແກຣມ:"
+#: lazarusidestrconsts.lisedtexttoolprogramexecutable
+msgid "Program Executable"
+msgstr ""
 
 #: lazarusidestrconsts.lisedtexttooltitleandfilenamerequired
 msgid "Title and Filename required"
 msgstr "ຕ້ອງການຫົວຂໍ້ ແລະ ຊື່ໄຟລ໌"
 
 #: lazarusidestrconsts.lisedtexttoolworkingdirectory
-msgid "Working Directory:"
+#, fuzzy
+#| msgid "Working Directory:"
+msgid "Working Directory"
 msgstr "ໄດເຣັກທໍຣີເຮັດວຽກ:"
 
 #: lazarusidestrconsts.liselevatethemessageprioritytoalwaysshowitbydefaultit
@@ -10383,6 +10390,11 @@ msgstr "ເຊື່ອງການຄົ້ນຫາ"
 msgctxt "lazarusidestrconsts.lishidewindow"
 msgid "Hide window"
 msgstr "ເຊື່ອງໜ້າຕ່າງ"
+
+#: lazarusidestrconsts.lishidewithpackageoptioniffpcfullversion
+#, object-pascal-format
+msgid "Hide with package option IF FPC_FULLVERSION>=%s THEN CustomOptions+=' -vm%s'"
+msgstr ""
 
 #: lazarusidestrconsts.lishidewithpackageoptionvm
 #, object-pascal-format
@@ -12019,7 +12031,9 @@ msgid "Configure Custom Components ..."
 msgstr "ກຳນົດຄ່າ ອົງປະກອບທີ່ກຳນົດເອງ..."
 
 #: lazarusidestrconsts.lismenuconfigexternaltools
-msgid "Configure External Tools ..."
+#, fuzzy
+#| msgid "Configure External Tools ..."
+msgid "Configure &External Tools ..."
 msgstr "ກຳນົດຄ່າ ເຄື່ອງມືພາຍນອກ..."
 
 #: lazarusidestrconsts.lismenuconfigurebuildlazarus
@@ -14402,6 +14416,11 @@ msgstr "ຊື່ໜ້າ \"%s\" ມີຢູ່ແລ້ວ. ບໍ່ໄດ�
 msgctxt "lazarusidestrconsts.lispanic"
 msgid "Panic"
 msgstr "Panic"
+
+#: lazarusidestrconsts.lisparameters
+msgctxt "lazarusidestrconsts.lisparameters"
+msgid "Parameters:"
+msgstr ""
 
 #: lazarusidestrconsts.lisparsed
 msgid ", parsed "

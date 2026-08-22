@@ -1843,7 +1843,7 @@ begin
   TestCompilerOptions:=nil;
 
   // free project, if it is still there
-  FreeThenNil(Project1);
+  Project1.Free;
 
   // free IDE parts
   FreeFormEditor;

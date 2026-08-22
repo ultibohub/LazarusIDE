@@ -134,6 +134,7 @@ resourcestring
 
   // command line help
   lisThisHelpMessage = 'This help message.';
+  lisParameters = 'Parameters:';
   lisPrimaryConfigDirectoryWhereLazarusStoresItsConfig = 'Primary config '+
     'directory where Lazarus stores its config files. Default is "%s".';
   lisLazarusOptionsProjectFilename = 'lazarus [options] <project-filename>';
@@ -477,7 +478,7 @@ resourcestring
   lisKMConfigureCustomComponents = 'Configure Custom Components';
   lisMenuConfigCustomComps = 'Configure Custom Components ...';
 
-  lisMenuConfigExternalTools = 'Configure External Tools ...';
+  lisMenuConfigExternalTools = 'Configure &External Tools ...';
   lisMenuQuickSyntaxCheck = 'Quick Syntax Check';
   lisMenuQuickSyntaxCheckOk = 'Quick syntax check OK';
   lisMenuGuessUnclosedBlock = 'Guess Unclosed Block';
@@ -2677,7 +2678,7 @@ resourcestring
 
   dlgPOSaveSession = 'Session';
   dlgApplicationSettings = 'Application settings';
-  dlgPOTitle = 'Title:';
+  dlgPOTitle = 'Title';
   lisHint = 'Hint';
   lisNote = 'Note';
   dlgPOUseLCLScaling = 'Use LCL scaling (Hi-DPI)';
@@ -4151,9 +4152,9 @@ resourcestring
 
   // edit external tools
   lisEdtExtToolEditTool = 'Edit Tool';
-  lisEdtExtToolProgramfilename = 'Program Filename:';
-  lisEdtExtToolParameters = 'Parameters:';
-  lisEdtExtToolWorkingDirectory = 'Working Directory:';
+  lisEdtExtToolProgramExecutable = 'Program Executable';
+  lisEdtExtToolParameters = 'Parameters';
+  lisEdtExtToolWorkingDirectory = 'Working Directory';
   lisShowConsole = 'Show console';
   lisOnlyAvailableOnWindowsRunToolInANewConsole = 'Only available on Windows. '
     +'Run tool in a new console.';
@@ -5999,6 +6000,8 @@ resourcestring
   lisChangeMethodVisibilityTo = 'Change method visibility to "%s"';
   lisHideWithProjectOptionVm = 'Hide with project option (-vm%s)';
   lisHideWithPackageOptionVm = 'Hide with package option (-vm%s)';
+  lisHideWithPackageOptionIfFPCFullVersion = 'Hide with package option IF '
+    +'FPC_FULLVERSION>=%s THEN CustomOptions+='' -vm%s''';
   lisRemoveLocalVariable3 = 'Remove local variable "%s"';
   lisShowAbstractMethodsOf = 'Show abstract methods of "%s"';
   lisCopyMoveFileToDirectory = 'Copy/Move File to Directory';

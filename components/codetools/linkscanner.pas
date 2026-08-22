@@ -2086,7 +2086,6 @@ begin
   CommentLevel:=0;
   FPascalCompiler:=pcFPC;
   CompilerMode:=cmFPC;
-  FNestedComments:=cmsNested_comment in DefaultCompilerModeSwitches[CompilerMode];
   IfLevel:=0;
   FSkippingDirectives:=lssdNone;
   FDirectivesStored:=StoreDirectives;
@@ -3537,24 +3536,27 @@ begin
       case ModeSwitch of
       cmsObjectiveC2: Include(Switches,cmsObjectiveC1);
       end;
-      if Enable then begin
-        FCompilerModeSwitches:=FCompilerModeSwitches+Switches;
-        case ModeSwitch of
-        cmsDefault_unicodestring:
-          begin
-            Values.Variables['FPC_UNICODESTRINGS'] := '1';
-            Values.Variables['UNICODE'] := '1';
+      if ScannedRange<lsrMainUsesSectionStart then begin // ModeSwitches are allowed/applied only before the main uses section
+        if Enable then begin
+          FCompilerModeSwitches:=FCompilerModeSwitches+Switches;
+          case ModeSwitch of
+          cmsDefault_unicodestring:
+            begin
+              Values.Variables['FPC_UNICODESTRINGS'] := '1';
+              Values.Variables['UNICODE'] := '1';
+            end;
+          end;
+        end else begin
+          FCompilerModeSwitches:=FCompilerModeSwitches-Switches;
+          case ModeSwitch of
+          cmsDefault_unicodestring:
+            begin
+              Values.Undefine('FPC_UNICODESTRINGS');
+              Values.Undefine('UNICODE');
+            end;
           end;
         end;
-      end else begin
-        FCompilerModeSwitches:=FCompilerModeSwitches-Switches;
-        case ModeSwitch of
-        cmsDefault_unicodestring:
-          begin
-            Values.Undefine('FPC_UNICODESTRINGS');
-            Values.Undefine('UNICODE');
-          end;
-        end;
+        FNestedComments:=cmsNested_comment in FCompilerModeSwitches; // need to refresh FNestedComments value
       end;
       exit;
     end;
@@ -4668,7 +4670,9 @@ var
   OldModeSwitches, EnabledModeSwitches,
     DisabledModeSwitches: TCompilerModeSwitches;
 begin
-  if FCompilerMode=AValue then exit;
+  // force SetCompilerMode - if {$MODE} is in the source code then all ModeSwitches have to be reassigned from the mode
+  // even if the implicit mode is the same and the compiler switches have been altered before
+  // if FCompilerMode=AValue then exit;
   Values.Undefine(CompilerModeVars[FCompilerMode]);
   FCompilerMode:=AValue;
   OldModeSwitches:=FCompilerModeSwitches;

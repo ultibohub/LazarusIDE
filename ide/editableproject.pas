@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, System.UITypes,
   // LCL
-  Forms,
+  Forms, LCLClasses,
   // LazUtils
   FileUtil, LazFileUtils, LazFileCache, LazUtilities, Maps, Laz2_XMLCfg, LazLoggerBase,
   // CodeTools
@@ -153,7 +153,7 @@ type
     procedure DeleteBookmark(ID: integer);
     //
     procedure LoadFromXMLConfig(XMLConfig: TXMLConfig; const Path: string;
-        Merge, IsPartOfProjectDefValue: boolean; FileVersion: integer); override;
+        FromLPI, NewFile, IsPartOfProjectDefValue: boolean; FileVersion: integer); override;
     procedure SaveToXMLConfig(XMLConfig: TXMLConfig; const Path: string;
         SaveData, SaveSession, IsPartOfProjectDefValue: boolean; UsePathDelim: TPathDelimSwitch); override;
     procedure SetSourceText(const SourceText: string; Beautify: boolean = false); override;
@@ -193,6 +193,7 @@ type
     procedure LoadDefaultSession; override;
     procedure SaveSessionInfo(const Path: string); override;
     procedure SaveToSession; override;
+    procedure DoFlagsChanged; override;
   public
     constructor Create(ProjectDescription: TProjectDescriptor); override;
     destructor Destroy; override;
@@ -226,10 +227,38 @@ type
     property Units[Index: integer]: TEditableUnitInfo read GetUnits;
   end;
 
-var
-  EditableProject1: TEditableProject absolute LazProject1;// the main project
+
+function GetEditableProject1: TEditableProject; inline;
+procedure SetEditableProject1(AProject: TEditableProject); inline;
+property EditableProject1: TEditableProject read GetEditableProject1 write SetEditableProject1;// the main project
 
 implementation
+
+type
+
+  { TProjectModifiedCallback }
+
+  TProjectModifiedCallback = class
+  public
+    procedure DoNewProject(ASender: TLazProject);
+  end;
+
+{ TProjectModifiedCallback }
+
+procedure TProjectModifiedCallback.DoNewProject(ASender: TLazProject);
+begin
+  LCL_SaveBackwardCompatibleLfm := (LazProject1 <> nil) and (pfCompatibilityMode in LazProject1.Flags);
+end;
+
+function GetEditableProject1: TEditableProject;
+begin
+  Result := TEditableProject(LazProject1);
+end;
+
+procedure SetEditableProject1(AProject: TEditableProject);
+begin
+  LazProject1 := AProject;
+end;
 
 { TUnitEditorInfo }
 
@@ -728,12 +757,12 @@ begin
   EditableProject1.DeleteBookmark(ID);
 end;
 
-procedure TEditableUnitInfo.LoadFromXMLConfig(XMLConfig: TXMLConfig;
-  const Path: string; Merge, IsPartOfProjectDefValue: boolean; FileVersion: integer);
+procedure TEditableUnitInfo.LoadFromXMLConfig(XMLConfig: TXMLConfig; const Path: string; FromLPI,
+  NewFile, IsPartOfProjectDefValue: boolean; FileVersion: integer);
 var
   c, i: Integer;
 begin
-  inherited LoadFromXMLConfig(XMLConfig, Path, Merge, IsPartOfProjectDefValue, FileVersion);
+  inherited LoadFromXMLConfig(XMLConfig, Path, FromLPI, NewFile, IsPartOfProjectDefValue, FileVersion);
   FComponentState := TWindowState(XMLConfig.GetValue(Path+'ComponentState/Value',0));
   FEditorInfoList.Clear;
   FEditorInfoList.NewEditorInfo;
@@ -807,6 +836,8 @@ end;
 
 destructor TEditableProject.Destroy;
 begin
+  if LazProject1 = Self then
+    LazProject1 := nil;
   FreeAndNil(FAllEditorsInfoMap);
   inherited Destroy;
   FreeAndNil(FAllEditorsInfoList);
@@ -1001,7 +1032,7 @@ begin
   BuildModes.SaveSessionOptsToXMLConfig(FXMLConfig, Path, True);
   BuildModes.SaveSessionData(Path);
   // save all units
-  SaveUnits(Path,true,false);
+  SaveUnits(Path,false,true,false);
 
   if Assigned(FDebuggerLink) then
     FDebuggerLink.SaveToSession(FXMLConfig, Path);
@@ -1018,6 +1049,12 @@ begin
   // Notifiy hooks
   if Assigned(OnSaveProjectInfo) then
     OnSaveProjectInfo(Self,FXMLConfig,FProjectWriteFlags+[pwfSkipProjectInfo]);
+end;
+
+procedure TEditableProject.DoFlagsChanged;
+begin
+  inherited DoFlagsChanged;
+  TProjectModifiedCallback(nil).DoNewProject(nil);
 end;
 
 function TEditableProject.AllEditorsInfoCount: Integer;
@@ -1152,5 +1189,6 @@ initialization
   RegisterIDEOptionsGroup(GroupProject, TProjectIDEOptions);
   RegisterIDEOptionsGroup(GroupCompiler, TProjectCompilerOptions);
 
+  GlobalLazProjectHooks.RegisterNewProjectHandler(@TProjectModifiedCallback(nil).DoNewProject);
 end.
 

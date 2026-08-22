@@ -7,11 +7,27 @@ interface
 uses
   SysUtils, Classes, Types,
   LCLType, LCLIntf,
-  FPCanvas, FPImage, GraphMath, GraphType, Graphics, syncobjs;
+  FPCanvas, FPImage, GraphMath, GraphType, IntfGraphics, Graphics, syncobjs;
+
+const
+  PTS_PER_INCH = 72;          // 1 pt = 1/72 inch
+  TWIPS_PER_INCH = 1440;      // 1 twip = 1/20 pt = 1/1440 inch
 
 type
-  TlmfList = class;
+  // Exception types
+  ElmfImage = class(Exception);
+  ElmfReader = class(ElmfImage);
+  ElmfWriter = class(ElmfImage);
+
+  // forward declarations
   TlmfImage = class;
+  TlmfList = class;
+
+  // abstract reader/writer classes
+  TlmfReader = class
+  public
+    procedure ReadFromStream(AStream: TStream; AImage: TlmfImage); virtual; abstract;
+  end;
 
   TlmfWriter = class
   public
@@ -28,6 +44,9 @@ type
     fList: TlmfList;
     fCrs:TCriticalSection;
     fEnhanced: Boolean;
+  private
+    function GetLogUnitsPerInch: Integer;
+    procedure SetLogUnitsPerInch(AValue: Integer);
   protected
     procedure AssignTo(Dest:TPersistent);override;
     function GetWidth:integer;override;
@@ -39,9 +58,9 @@ type
     procedure SetTransparent(Value: Boolean); override;
       //procedure Erase;override;
   public
-    constructor Create;override;
-    destructor Destroy;override;
-    procedure Clear;override;
+    constructor Create; override;
+    destructor Destroy; override;
+    procedure Clear; override;
     procedure Draw(ACanvas: TCanvas; const Rect: TRect); override;
 
     function ScaleSizeX(ax: Integer): Integer;
@@ -52,21 +71,28 @@ type
     procedure SaveToLMFFile(AFileName: String);
     procedure SaveToLMFStream(Stream: TStream);
     procedure SaveToStream(Stream: TStream); override;
+    procedure LoadFromLMFFile(AFileName: String);
+    procedure LoadFromLMFStream(AStream: TStream; IsEnhanced: Boolean);
     procedure LoadFromStream(Stream: TStream); override;
 
     property Enhanced: Boolean read FEnhanced write FEnhanced;  // Write WMF or EMF stream
     property List: TlmfList read fList;
+
+    property LogUnitsPerInch: Integer read GetLogUnitsPerInch write SetLogUnitsPerInch;
   end;
 
   TlmfList = class(TComponent)
   private
     fWidth, fHeight:integer;
+    fLogUnitsPerInch: Integer;
   public
+    constructor Create(AOwner: TComponent); override;
     procedure GetChildren(Proc: TGetChildProc; {%H-}Root: TComponent); override;
     function GetChildOwner: TComponent; override;
   published
     property Width:integer read fWidth write fWidth;
     property Height:integer read fHeight write fHeight;
+    property LogUnitsPerInch: Integer read FLogUnitsPerInch write FLogUnitsPerInch;
   end;
 
   TlmfCanvas = class(TCanvas)
@@ -97,8 +123,9 @@ type
     procedure RequiredState(ReqState: TCanvasState); override;
 
   public
-    constructor Create(Almf:TlmfImage);
+    constructor Create(Almf: TlmfImage);
 
+    procedure Draw(X, Y: Integer; SrcGraphic: TGraphic); override;
     procedure StretchDraw(const DestRect: TRect; SrcGraphic: TGraphic); override;
 
     procedure Ellipse (x1,y1,x2,y2:integer); override; overload;
@@ -135,7 +162,7 @@ type
 implementation
 
 uses
-  lmfObj, lmfWMFWrite;
+  lmfObj, lmfWMFWrite, lmfWMFRead;
 
 constructor TlmfImage.Create;
 begin
@@ -165,6 +192,7 @@ begin
       mf.ReadComponent(TlmfImage(Dest).fList);
       TlmfImage(Dest).fWidth:=fWidth;
       TlmfImage(Dest).fHeight:=fHeight;
+      TlmfImage(Dest).LogUnitsPerInch := LogUnitsPerInch;
     finally
       mf.Free;
     end;
@@ -176,6 +204,16 @@ end;
 procedure TlmfImage.Clear;
 begin
   fList.DestroyComponents;
+end;
+
+function TlmfImage.GetLogUnitsPerInch: Integer;
+begin
+  Result := fList.LogUnitsPerInch;
+end;
+
+procedure TlmfImage.SetLogUnitsPerInch(AValue: Integer);
+begin
+  fList.LogUnitsPerInch := AValue;
 end;
 
 function TlmfImage.GetWidth: integer;
@@ -306,6 +344,34 @@ begin
   end;
 end;
 
+procedure TlmfImage.LoadFromLMFFile(AFileName: String);
+var
+  stream: TFileStream;
+  isWMF: Boolean;
+begin
+  stream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
+  try
+    LoadFromLMFStream(stream, false);
+  finally
+    stream.Free;
+  end;
+end;
+
+procedure TlmfImage.LoadFromLMFStream(AStream: TStream; IsEnhanced: Boolean);
+var
+  reader: TlmfReader;
+begin
+  if IsEnhanced then
+    //reader := TEMFReader.Create  // to be completed...
+  else
+    reader := TlmfWMFReader.Create;
+  try
+    reader.ReadFromStream(AStream, self);
+  finally
+    reader.Free;
+  end;
+end;
+
 procedure TlmfImage.LoadFromStream(Stream: TStream);
 begin
   Stream.ReadComponent(fList);
@@ -424,22 +490,85 @@ begin
   fImage.fList.InsertComponent(item);
 end;
 
+function UniqueColor(ABitmap: TCustomBitmap): TColor;
+var
+  img: TLazIntfImage;
+  x, y: Integer;
+  found: Boolean;
+  testColor: TFPColor;
+begin
+  found := false;
+  img := ABitmap.CreateIntfImage;
+  try
+    repeat
+      Result := RGBToColor(Random(255), Random(255), Random(255));;
+      testColor := TColorToFPColor(Result);
+      found := false;
+      for y := 0 to img.Height-1 do
+      begin
+        for x := 0 to img.Width-1 do
+          if img.Colors[x, y] = testColor then
+          begin
+            found := true;
+            break;
+          end;
+        if found then break;
+      end;
+    until not found;
+  finally
+    img.Free;
+  end;
+end;
+
+procedure TlmfCanvas.Draw(X, Y: Integer; SrcGraphic: TGraphic);
+var
+  R: TRect;
+  ppi: Integer = 96;  // Pixels per inch of SrcGraphic -- to do: should be extracted from file
+begin
+  R.Left := X;
+  R.Top := Y;
+  R.Right := round(X + SrcGraphic.Width / ppi * fImage.LogUnitsPerInch);
+  R.Bottom := round(Y + SrcGraphic.Height / ppi * fImage.LogUnitsPerInch);
+  StretchDraw(R, SrcGraphic);
+end;
+
 procedure TlmfCanvas.StretchDraw(const DestRect: TRect; SrcGraphic: TGraphic);
 var
-  item:TlmfGraph;
+  item: TlmfPicture;
+  bmp: TBitmap = nil;
 begin
-  //RequiredState([csFontValid,csBrushValid]);
-  item:=TlmfGraph.Create(nil);
+  if (SrcGraphic = nil) or SrcGraphic.Empty then
+    exit;
+  if (SrcGraphic is TCustomBitmap) and (TCustomBitmap(SrcGraphic).PixelFormat = pf32bit) then
+  begin
+    // Convert to 24 bpp bitmap and switch to mask-transparency because wmf
+    // does not support alpha channel.
+    bmp := TBitmap.Create;
+    bmp.PixelFormat := pf24bit;
+    bmp.Transparent := true;
+    bmp.TransparentColor := UniqueColor(TCustomBitmap(SrcGraphic));
+    bmp.SetSize(SrcGraphic.Width, SrcGraphic.Height);
+    bmp.Canvas.Brush.Color := bmp.TransparentColor;
+    bmp.Canvas.FillRect(0, 0, bmp.Width, bmp.Height);
+    bmp.Canvas.Draw(0, 0, SrcGraphic);
+  end;
+
+  item := TlmfPicture.Create(nil);
   fImage.fList.InsertComponent(item);
-  item.Graph.Assign(SrcGraphic);
+  if Assigned(bmp) then
+    item.Picture.Assign(bmp)
+  else
+    item.Picture.Assign(SrcGraphic);
   item.Clip := DestRect;
+
+  bmp.Free;
 end;
 
 procedure TlmfCanvas.SetColor(x,y:integer; const Value:TFPColor);
 var
   item:TlmfAnchor;
 begin
-  item:=TlmfColor.Create(x,y,Value);
+  item := TlmfColor.Create(x,y,Value);
   fImage.fList.InsertComponent(item);
 end;
 
@@ -795,6 +924,12 @@ end;
 
 
 { LMF list }
+
+constructor TlmfList.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FLogUnitsPerInch := TWIPS_PER_INCH;
+end;
 
 procedure TlmfList.GetChildren(Proc: TGetChildProc; Root: TComponent);
 var
