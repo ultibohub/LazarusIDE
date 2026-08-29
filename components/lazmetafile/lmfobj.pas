@@ -137,28 +137,9 @@ type
     property Bottom:integer read fClip.Bottom write fClip.Bottom;
   end;
 
-  TlmfRect=class(TlmfClip)
+  TlmfRect = class(TlmfClip)
   public
     procedure Action(fImage: TlmfImage; ACanvas: TCanvas);override;
-  end;
-
-  TlmfFrameRect = class(TlmfRect)
-  public
-    procedure Action(fImage: TlmfImage; ACanvas: TCanvas);override;
-  end;
-
-  TlmfFrame3D = class(TlmfRect)
-  private
-    fTopColor: TColor;
-    fBottomColor: TColor;
-    fFrameWidth: Integer;
-  public
-    constructor Create(ARect:TRect; ATopColor, ABottomColor: TColor; AFrameWidth: Integer); overload;
-    procedure Action(fImage: TlmfImage; ACanvas: TCanvas); override;
-  published
-    property TopColor: TColor read fTopColor write fTopColor;
-    property BottomColor: TColor read fBottomColor write fBottomColor;
-    property FrameWidth: Integer read fFrameWidth write fFrameWidth;
   end;
 
   TlmfRoundRect = class(TlmfRect)
@@ -170,6 +151,18 @@ type
   published
     property Rx: Integer read frx write frx;
     property Ry: Integer read fry write fry;
+  end;
+
+  TlmfFloodFill = class(TlmfAnchor)
+  private
+    fFillColor: TColor;
+    fFillStyle: TFillStyle;
+  public
+    constructor Create(AX, AY: integer; AFillColor: TColor; AFillStyle: TFillStyle); overload;
+    procedure Action(fImage: TlmfImage; ACanvas: TCanvas); override;
+  published
+    property FillColor: TColor read fFillColor write fFillColor;
+    property FillStyle: TFillStyle read fFillStyle write fFillStyle;
   end;
 
   TlmfGradientFill = class(TlmfClip)
@@ -253,6 +246,14 @@ type
     property Pen: TPen read fPen write fPen;
   end;
 
+  TlmfSelectObject = class(TlmfObject)
+  private
+    fCurrObj: TlmfObject;
+  public
+    constructor Create(ACurrObj: TlmfObject); overload;
+    procedure Action(fImage: TlmfImage; ACanvas: TCanvas); override;
+  end;
+
   TlmfPicture = class(TlmfClip)
   private
     fPicture: TPicture;
@@ -283,8 +284,10 @@ type
   TlmfPolygon=class(TlmfPolyline)
   private
     fWinding: boolean;
+    fBorderPts: Integer;
   public
-    constructor Create(APoints: PPoint; NumPts: integer; Winding: boolean = false); overload;
+    constructor Create(APoints: PPoint; ANumPts: integer; AWinding: boolean = false;
+      ABorderPts: Integer = -1); overload;
     procedure Action(fImage: TlmfImage; ACanvas: TCanvas); override;
   published
     property Winding:boolean read fWinding write fWinding;
@@ -525,19 +528,6 @@ begin
 end;
 
 
-{ TlmfFrameRect (rectangle drawn with brush settings) }
-
-procedure TlmfFrameRect.Action(fImage:TlmfImage; ACanvas:TCanvas);
-begin
-  ACanvas.FrameRect(
-    fImage.ScaleX(fClip.Left),
-    fImage.ScaleY(fClip.Top),
-    fImage.ScaleX(fClip.Right),
-    fImage.ScaleY(fClip.Bottom)
-  );
-end;
-
-
 { TlmfRoundRect }
 
 constructor TlmfRoundRect.Create(ARect: TRect; ARx, ARy: Integer);
@@ -560,58 +550,19 @@ begin
 end;
 
 
-{ TlmfFrame3d }
+{ TlmfFloodFill }
 
-constructor TlmfFrame3d.Create(ARect: TRect; ATopColor, ABottomColor: TColor;
-  AFrameWidth: Integer);
+constructor TlmfFloodFill.Create(AX, AY: Integer; AFillColor: TColor;
+  AFillStyle: TFillStyle);
 begin
-  inherited Create(ARect);
-  fTopColor := ATopColor;
-  fBottomColor := ABottomColor;
-  fFrameWidth := AFrameWidth;
+  inherited Create(AX, AY);
+  fFillColor := AFillColor;
+  fFillStyle := AFillStyle;
 end;
 
-procedure TlmfFrame3d.Action(fImage: TlmfImage; ACanvas: TCanvas);
-var
-  xL, xR, yT, yB: Integer;
-  W, wFrame, i : Integer;
+procedure TlmfFloodFill.Action(fImage: TlmfImage; ACanvas: TCanvas);
 begin
-  xL := fImage.ScaleX(Left);
-  xR := fImage.ScaleX(Right);
-  yT := fImage.ScaleY(Top);
-  yB := fImage.ScaleY(Bottom);
-
-  if yB - yT > xR - xL then
-  begin
-    W := xR - xL + 1;
-    wFrame := fImage.ScaleSizeX(fFrameWidth);
-  end else
-  begin
-    W := yB - yT + 1;
-    wFrame := fImage.ScaleSizeY(fFrameWidth);
-  end;
-
-  if wFrame > W then
-    W := W-1
-  else
-    W := wFrame;
-
-  for i := 1 to W do
-  begin
-    ACanvas.Pen.Color := fTopColor;
-    ACanvas.MoveTo(xL, yB-1);
-    ACanvas.LineTo(xL, yT);
-    ACanvas.LineTo(xR-1, yT);
-
-    ACanvas.Pen.Color := fBottomColor;
-    ACanvas.LineTo(xR-1, yB-1);
-    ACanvas.LineTo(xL, yB-1);
-
-    inc(xL);
-    inc(yT);
-    dec(xR);
-    dec(yB);
-  end;
+  ACanvas.FloodFill(fImage.ScaleX(pX), fImage.ScaleY(pY), fFillColor, fFillStyle)
 end;
 
 
@@ -821,6 +772,36 @@ begin
 end;
 
 
+{ TlmfSelectObject }
+
+constructor TlmfSelectObject.Create(ACurrObj: TlmfObject);
+begin
+  inherited Create(nil);
+  FCurrObj := ACurrObj;
+end;
+
+procedure TlmfSelectObject.Action(fImage: TlmfImage; ACanvas: TCanvas);
+var
+  ht: Integer;
+begin
+  if FCurrObj is TlmfBrush then
+    ACanvas.Brush.Assign(TlmfBrush(FCurrObj).Brush)
+  else
+  if FCurrObj is TlmfPen then
+  begin
+    ACanvas.Pen.Assign(TlmfPen(FCurrObj).Pen);
+    ACanvas.Pen.Width := fImage.ScaleSizeY(TlmfPen(FCurrObj).Pen.Width);
+  end else
+  if FCurrObj is TlmfFont then
+  begin
+    ACanvas.Font.Assign(TlmfFont(FCurrObj).Font);
+    ht := abs(fImage.ScaleSizeY(TlmfFont(FCurrObj).Height));
+    if ht <= 0 then ht := 1;
+    ACanvas.Font.Height := -ht;
+  end;
+end;
+
+
 { TlmfPicture }
 
 constructor TlmfPicture.Create(AnOwner:TComponent);
@@ -911,18 +892,32 @@ end;
 
 { TlmfPolygon }
 
-constructor TlmfPolygon.Create(APoints: PPoint; NumPts: integer;
-  Winding: boolean = false);
+{ Covers also the case of multiple polygons; in this case ABorderPts is the
+  number of "real" polygon points without the "retreat" points needed to close
+  the overall shape properly.
+  See https://wiki.freepascal.org/Developing_with_Graphics#Polygon_with_a_hole
+}
+constructor TlmfPolygon.Create(APoints: PPoint; ANumPts: integer;
+  AWinding: boolean = false; ABorderPts: Integer = -1);
 begin
-  inherited Create(APoints, NumPts);
-  fWinding := Winding;
+  inherited Create(APoints, ANumPts);
+  fWinding := AWinding;
+  fBorderPts := ABorderPts;
 end;
 
-procedure TlmfPolygon.Action(fImage:TlmfImage;ACanvas:TCanvas);
+procedure TlmfPolygon.Action(fImage: TlmfImage; ACanvas: TCanvas);
 var
   i: longint;
   npts: array of TPoint = nil;
+  ps: TPenStyle;
 begin
+  if fBorderPts > -1 then
+  begin
+    // Poly-Polygon
+    ps := ACanvas.Pen.Style;
+    ACanvas.Pen.Style := psClear;
+  end;
+
   Setlength(npts, Length(pts));
   for i:=0 to High(pts) do
   begin
@@ -930,16 +925,26 @@ begin
     npts[i].y:=fImage.ScaleY(pts[i].y);
   end;
   ACanvas.Polygon(npts,fWinding,0,length(npts));
+
+  if fBorderPts > -1 then
+  begin
+    ACanvas.Pen.Style := ps;
+    ACanvas.PolyLine(@pts[0], FBorderPts);
+  end;
 end;
 
 
 initialization
   RegisterClasses([TlmfAnchor,
-    TlmfMoveTo, TlmfLineTo, TlmfLine, TlmfText, TlmfTextInRect,
-    TlmfClip, TlmfRect, TlmfRoundRect, TlmfEllipse, TlmfArc, TlmfChord, TlmfPie,
+    TlmfMoveTo, TlmfLineTo, TlmfLine,
+    TlmfText, TlmfTextInRect,
+    TlmfClip, TlmfRect, TlmfRoundRect, TlmfEllipse,
+    TlmfArc, TlmfChord, TlmfPie,
     TlmfPicture, TlmfPolyLine, TlmfPolygon,
+    TlmfFloodFill, TlmfGradientFill,
     TlmfBkMode, TlmfBkColor, TlmfTextColor, TlmfColor,
-    TlmfFont, TlmfBrush, TlmfPen
+    TlmfFont, TlmfBrush, TlmfPen,
+    TlmfSelectObject
   ]);
 
 end.

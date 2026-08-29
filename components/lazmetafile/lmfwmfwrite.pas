@@ -17,7 +17,9 @@ type
     FImage: TlmfImage;
     FMaxRecordSize: Int64;
     FObjTable: TFPList;        // List with WMF objects (pen, brush, ...)
+    FCurrBrush: TBrush;
     FCurrFont: TFont;
+    FCurrPen: TPen;
 
     // Specific WMF records
     procedure WriteArc(AStream: TStream; AItem: TlmfArc);
@@ -30,6 +32,7 @@ type
     procedure WriteChord(AStream: TStream; AItem: TlmfChord);
     procedure WriteEllipse(AStream: TStream; AItem: TlmfEllipse);
     procedure WriteEOF(AStream: TStream);
+    procedure WriteExtFloodFill(AStream: TStream; AItem: TlmfFloodFill);
     procedure WriteFont(AStream: TStream; AItem: TlmfFont);
     procedure WritePicture(AStream: TStream; AItem: TlmfPicture);
     procedure WriteLineTo(AStream: TStream; AItem: TlmfLineTo);
@@ -221,6 +224,26 @@ const
   AD_CLOCKWISE = $00000002;
                   *)
 
+function SameFont(Font1, Font2: TFont): Boolean;
+begin
+  Result := Font1.IsEqual(Font2);
+end;
+
+function SameBrush(Brush1, Brush2: TBrush): Boolean;
+begin
+  Result := Brush1.EqualsBrush(Brush2);
+end;
+
+function SamePen(Pen1, Pen2: TPen): Boolean;
+begin
+  Result := (Pen1.Style = Pen2.Style) and
+            (Pen1.Width = Pen2.Width) and
+            (Pen1.Color = Pen2.Color) and
+            (Pen1.Cosmetic = Pen2.Cosmetic) and
+            (Pen1.EndCap = Pen2.EndCap) and
+            (Pen1.JoinStyle = Pen2.JoinStyle);
+end;
+
 { TWMFWriter }
 
 constructor TWMFWriter.Create;
@@ -255,8 +278,34 @@ begin
 end;
 
 function TWMFWriter.FindInObjTable(AItem: TComponent): Integer;
+var
+  i: Integer;
+  item: TlmfObject;
 begin
-  Result := FObjTable.IndexOf(AItem);
+  for i := FObjTable.Count-1 downto 0 do  // or the other direction?
+  begin
+    item := TlmfObject(FObjTable[i]);
+    if (item.ClassType = AItem.ClassType) then
+    begin
+      if (AItem is TlmfFont) and SameFont(TlmfFont(AItem).Font, TlmfFont(item).Font) then
+      begin
+        Result := i;
+        exit;
+      end else
+      if (AItem is TlmfPen) and SamePen(tlmfPen(AItem).Pen, TlmfPen(item).Pen) then
+      begin
+        Result := i;
+        exit;
+      end else
+      if (AItem is TlmfBrush) and SameBrush(tlmfBrush(AItem).Brush, TlmfBrush(item).Brush) then
+      begin
+        Result := i;
+        exit;
+      end;
+    end;
+  end;
+  Result := -1;
+// was:  Result := FObjTable.IndexOf(AItem);
 end;
 
 function TWMFWriter.MakeWMFColorRecord(AColor: TColor): TWMFColorRecord;
@@ -425,6 +474,9 @@ begin
   // Write the object table index of the brush to the SelectObject WMF record:
   idxObj := word(idx);
   WriteWMFRecord(AStream, META_SELECTOBJECT, idxObj, SizeOf(Word));
+
+  // Store current brush for cases where brush must be changed temporarily
+  FCurrBrush := AItem.Brush;
 end;
 
 procedure TWMFWriter.WriteChord(AStream: TStream; AItem: TlmfChord);
@@ -460,6 +512,22 @@ end;
 procedure TWMFWriter.WriteEOF(AStream: TStream);
 begin
   WriteWMFRecord(AStream, META_EOF, 0);
+end;
+
+{ NOTE: The flood fill records are not displayed correctly by Powerpoint and by
+  LibreOffice Draw (correctly by Paint and IrfanView). }
+procedure TWMFWriter.WriteExtFloodFill(AStream: TStream; AItem: TlmfFloodFill);
+var
+  rec: TWMFExtFloodFillRecord;
+begin
+  rec.Mode := 1 - ord(AItem.FillStyle);
+  rec.ColorRED := Red(AItem.FillColor);
+  rec.ColorGREEN := Green(AItem.FillColor);
+  rec.ColorBLUE := Blue(AItem.FillColor);
+  rec.XStart := AItem.px;
+  rec.YStart := AItem.py;
+  // WMF record header + parameters
+  WriteWMFRecord(AStream, META_EXTFLOODFILL, rec, SizeOf(TWMFExtFloodFillRecord));
 end;
 
 procedure TWMFWriter.WriteFont(AStream: TStream; AItem: TlmfFont);
@@ -518,6 +586,41 @@ begin
   // Store font for text layout for TlmfTextInRect records
   FCurrFont := AItem.Font;
 end;
+                 (*
+procedure TWMFWriter.WriteFrame3D(AStream: TStream; AItem: TlmfFrame3D);
+var
+  rec: TWMFRectRecord;
+  penRec: TWMFPenRecord;
+  currBrushIdx, currPenIdx: Integer;
+  tmpItem: TlmfObject;
+  itemIdx: Integer;
+begin
+  itemIdx := FImage.List.IndexOfComponent(AItem);
+
+  currBrushIdx := FindInObjTable(FCurrBrush);
+  currPenIdx := FindInObjTable(FCurrPen);
+
+  // 1) We don't need the pen --> Style = psClear
+  tmpItem := TlmfPen.Create(nil);
+  tmpItem.Pen.Style := psClear;
+
+
+  penRec := Default(TWMFPenRecord);
+  penRec.Style := PS_NONE;
+  WriteWMFRecord(AStream, META_CREATEPENINDIRECT, penRec, SizeOf(penRec));
+  WriteWMFRecord(AStream,
+
+
+
+  rec.Left := AItem.Left;
+  rec.Top := AItem.Top;
+  rec.Right := AItem.Right;
+  rec.Bottom := AItem.Bottom;
+
+  // WMF record header + parameters
+  WriteWMFRecord(AStream, META_RECTANGLE, rec, SizeOf(TWMFRectRecord));
+end;
+*)
 
 { Extracts the mask from the input bitmap (ABitmap) as AMaskOnly.
   Applies the mask to itself and returns the result as AMaskedBitmap.
@@ -697,6 +800,9 @@ begin
   // Write the object table index of the pen to the SelectObject WMF record.
   idxObj := word(idx);
   WriteWMFRecord(AStream, META_SELECTOBJECT, idxObj, SizeOf(Word));
+
+  // Store current pen for cases where pen must be changed temporarily
+  FCurrPen := AItem.Pen;
 end;
 
 procedure TWMFWriter.WritePie(AStream: TStream; AItem: TlmfPie);
@@ -780,6 +886,9 @@ begin
     // most specialized objects at top, least specialized objects at bottom!
     if item is TlmfPicture then
       WritePicture(AStream, TlmfPicture(item))
+    else
+    if item is TlmfFloodFill then
+      WriteExtFloodFill(AStream, TlmfFloodFill(item))
     else
     if item is TlmfPolygon then
       WritePolygon(AStream, TlmfPolygon(item))

@@ -11,6 +11,21 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 3.9\n"
 
+#: heaptrcview.brkfailedtoopenfile
+msgid "Failed to open file"
+msgstr "Öffnen der Datei fehlgeschlagen"
+
+#: heaptrcview.brkfailedtoopens
+#, object-pascal-format
+msgid "Failed to open \"%s\"."
+msgstr "Öffnen von \"%s\" fehlgeschlagen."
+
+#: heaptrcview.brkfailedtoopensjumptocurren
+#, object-pascal-format, fuzzy
+#| msgid "Failed to open \"%s\". Jump to current editor instead?"
+msgid "Failed to open \"%s\". Jump to appropriate line in current editor instead?"
+msgstr "Öffnen von \"%s\" fehlgeschlagen. Zum aktuellen Editor springen?"
+
 #: heaptrcview.rsdtimes
 #, object-pascal-format
 msgid " (%d times)"

@@ -232,6 +232,25 @@ type
     Reserved: word;
   end;
 
+  TWMFFloodFillRecord = packed record
+    ColorRed: byte;
+    ColorGreen: byte;
+    ColorBlue: byte;
+    Reserved: byte;
+    YStart: SmallInt;
+    XStart: SmallInt;
+  end;
+
+  TWMFExtFloodFillRecord = packed record
+    Mode: Word;
+    ColorRed: Byte;
+    ColorGreen: Byte;
+    ColorBlue: Byte;
+    Reserved: Byte;
+    YStart: SmallInt;
+    XStart: SmallInt;
+  end;
+
   TWMFExtTextOutRecord = packed record
     Y: SmallInt;
     X: SmallInt;
@@ -303,6 +322,21 @@ type
     // Following: BitmapInfoHeader plus pixel data.
   end;
   PWMFDIBStretchBltRecord = ^TWMFDIBStretchBltRecord;
+
+  TWMFSetDIBtoDEVRecord = packed record
+    ColorUsage: Word;
+    ScanCount: Word;
+    StartScan: Word;
+    yDib: Word;
+    xDib: Word;
+    Height: Word;
+    Width: Word;
+    yDest: Word;
+    xDest: Word;
+    // Following BitmapCoreHeader or BitmapInfoHeader
+  end;
+  PWMFSetDIBtoDEVRecord = ^TWMFSetDIBToDEVRecord;
+
 
  function WMF_GetRecordTypeName(ARecordType: Word): String;
 

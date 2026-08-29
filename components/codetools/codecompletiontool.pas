@@ -1222,7 +1222,7 @@ function TCodeCompletionCodeTool.AddLocalVariable(CleanCursorPos: integer;
   end;
 
 var
-  CursorNode, VarSectionNode, VarNode: TCodeTreeNode;
+  VarSectionNode, VarNode: TCodeTreeNode;
   Indent, InsertPos: integer;
   InsertTxt: string;
   OldCodePos: TCodePosition;
@@ -1248,14 +1248,12 @@ begin
 
   // find the level and find sections in front
   Node:=Tree.Root;
-  CursorNode:=nil;
   VarSectionNode:=nil;
   OtherSectionNode:=nil;
   HeaderNode:=nil;
   ParentNode:=nil;
   while Node<>nil do begin
     if Node.StartPos>CleanCursorPos then break;
-    CursorNode:=Node;
     if Node.Desc in [ctnProcedureHead,ctnUsesSection] then
       HeaderNode:=Node
     else if Node.Desc=ctnVarSection then
@@ -2085,25 +2083,37 @@ begin
         if FindIdentifierInContext(Params) then begin
           AddSourceName:= (ResExprContext.Node<>ExprType.Context.Node) or
                           (ResExprContext.Tool<>OrigExprContext.Tool);
-          if ((Params.NewNode.Desc=ctnTypeDefinition) and
-          (ExprType.Context.Node.Desc=ctnTypeDefinition) and
-          (Params.NewNode=ExprType.Context.Node))
-          or
-          ((Params.NewNode.Desc=ctnTypeDefinition) and
-          (ExprType.Context.Node.Desc in AllClasses) and
-          (Params.NewNode.FirstChild=ExprType.Context.Node))
-          or // declaration is within class/object/ ..
-          ((Params.NewNode.Desc=ctnTypeDefinition) and
-          (EntryContext.Node.HasAsParent(Params.NewNode)))
-          or // declaration is function result type (and fits to EntryContext.Node)
-          ((Params.NewNode.Desc=ctnTypeDefinition) and
-          (FuncResultNode<>nil) and
-          (FuncResultNode.Desc=ctnIdentifier) and
-          (CompareDottedIdentifiers(Pchar(NewType),
-            PChar(@EntryContext.Tool.Src[FuncResultNode.StartPos]))=0)) // simplified
-          then
-          // the same decl nodes =  not shadowed, may be located in other unit
-            AddSourceName:=false;
+          if AddSourceName then begin
+          // check if found now declaration is within nested classes => class path is enough
+            if not OrigExprContext.Node.HasAsParent(FindClassNode(Params.NewNode)) and
+            Params.NewNode.HasAsParent(FindClassNode(OrigExprContext.Node))
+            then begin
+              // declaration is shadowed by that in nested class => use type from outer class
+              AddSourceName:=false;
+              NewType:=ExtractClassPath(FindClassNode(OrigExprContext.Node))+'.'+NewType;
+            end;
+
+            if AddSourceName then
+            if ((Params.NewNode.Desc=ctnTypeDefinition) and
+            (ExprType.Context.Node.Desc=ctnTypeDefinition) and
+            (Params.NewNode=ExprType.Context.Node))
+            or
+            ((Params.NewNode.Desc=ctnTypeDefinition) and
+            (ExprType.Context.Node.Desc in AllClasses) and
+            (Params.NewNode.FirstChild=ExprType.Context.Node))
+            or // declaration is within class/object/ ..
+            ((Params.NewNode.Desc=ctnTypeDefinition) and
+            (EntryContext.Node.HasAsParent(Params.NewNode)))
+            or // declaration is function result type (and fits to EntryContext.Node)
+            ((Params.NewNode.Desc=ctnTypeDefinition) and
+            (FuncResultNode<>nil) and
+            (FuncResultNode.Desc=ctnIdentifier) and
+            (CompareDottedIdentifiers(Pchar(NewType),
+              PChar(@EntryContext.Tool.Src[FuncResultNode.StartPos]))=0)) // simplified
+            then
+            // the same decl nodes =  not shadowed, may be located in other unit
+              AddSourceName:=false;
+          end;
         end else
           AddSourceName:=false;
         if AddSourceName and (self=ResExprContext.Tool) then begin

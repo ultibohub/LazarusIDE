@@ -957,6 +957,8 @@ type
   TGtk3ComboBox = class(TGtk3Bin)
   private
     FCellView: PGtkCellView;
+    FDropDownRePopup: Boolean;
+    FDropDownModelChanged: Boolean;
     function GetItemIndex: Integer;
     procedure SetDroppedDown(AValue: boolean);
     procedure SetItemIndex(AValue: Integer);
@@ -967,6 +969,7 @@ type
     class procedure EntryChanged({%H-}AEntry: PGtkEntry; AData: gpointer); cdecl; static;
     class function EntryFocusIn(AEntry: PGtkWidget; Event: PGdkEventFocus; AData: gpointer): gboolean; cdecl; static;
     class procedure NotifySignal(AObject: PGObject; pspec: PGParamSpec; AData: GPointer); cdecl; static;
+    class procedure ModelChangedSignal(AData: GPointer); cdecl; static;
   protected
     procedure ConnectSizeAllocateSignal(ToWidget:PGtkWidget);override;
     function CreateWidget(const {%H-}Params: TCreateParams):PGtkWidget; override;
@@ -1145,6 +1148,7 @@ type
     FBox: PGtkBox;
 
     FMDIArea: TGtk3MDIArea; //available only when LCLObject is fsMDIForm
+    FWaylandIconified: Boolean;
 
     {Deferred resize: when SetBounds is called from within the synchronous
      WindowSizeAllocate delivery, resize() is deferred to a g_idle_add callback
@@ -13577,10 +13581,16 @@ begin
   Result := False;// stop the timer
 end;
 
+class procedure TGtk3ComboBox.ModelChangedSignal(AData: GPointer); cdecl;
+begin
+  TGtk3ComboBox(AData).FDropDownModelChanged := True;
+end;
+
 class procedure TGtk3ComboBox.NotifySignal(AObject: PGObject; pspec: PGParamSpec; AData: GPointer); cdecl;
 var
   AValue: TGValue;
   ComboBox: TCustomComboBox;
+  APopup: PGtkWidget;
 begin
   if pspec^.name = 'popup-shown' then
   begin
@@ -13588,11 +13598,32 @@ begin
     AValue.g_type := G_TYPE_BOOLEAN;
     g_object_get_property(AObject, pspec^.name, @AValue); // get property value
     if AValue.data[0].v_int = 0 then // if 0 = False then it is close up
-      g_idle_add(@GtkPopupCloseUp, AData)
+    begin
+      if TGtk3ComboBox(AData).FDropDownRePopup then
+        TGtk3ComboBox(AData).FDropDownRePopup := False
+      else
+        g_idle_add(@GtkPopupCloseUp, AData);
+    end
     else // in other case it is drop down
     begin
+      if TGtk3ComboBox(AData).FDropDownRePopup then
+      begin
+        TGtk3ComboBox(AData).FDropDownRePopup := False;
+        exit;
+      end;
+      TGtk3ComboBox(AData).FDropDownModelChanged := False;
       ComboBox.IntfGetItems;
       LCLSendDropDownMsg(ComboBox);
+      if TGtk3ComboBox(AData).FDropDownModelChanged then
+      begin
+        APopup := PGtkComboBoxPrivate(PGtkComboBox(AObject)^.priv3)^.popup_widget;
+        if Gtk3IsMenu(PGObject(APopup)) then
+        begin
+          TGtk3ComboBox(AData).FDropDownRePopup := True;
+          PGtkComboBox(AObject)^.popdown;
+          PGtkComboBox(AObject)^.popup;
+        end;
+      end;
     end;
   end;
 end;
@@ -13613,6 +13644,16 @@ begin
   g_signal_connect_data(GetContainerWidget, 'changed', TGCallback(@ComboBoxChanged), Self, nil, G_CONNECT_DEFAULT);
   //OnCloseUp
   g_signal_connect_data(GetContainerWidget, 'notify', TGCallback(@NotifySignal), Self, nil, G_CONNECT_DEFAULT);
+
+  if Gtk3IsComboBox(GetContainerWidget) then
+  begin
+    g_signal_connect_data(PGObject(PGtkComboBox(GetContainerWidget)^.get_model), 'row-inserted',
+      TGCallback(@ModelChangedSignal), Self, nil, [G_CONNECT_SWAPPED]);
+    g_signal_connect_data(PGObject(PGtkComboBox(GetContainerWidget)^.get_model), 'row-deleted',
+      TGCallback(@ModelChangedSignal), Self, nil, [G_CONNECT_SWAPPED]);
+    g_signal_connect_data(PGObject(PGtkComboBox(GetContainerWidget)^.get_model), 'row-changed',
+      TGCallback(@ModelChangedSignal), Self, nil, [G_CONNECT_SWAPPED]);
+  end;
 
   //TODO: if we have an entry then use CreateFrom() to create TGtk3Entry
   if Gtk3IsEntry(PGtkComboBox(FWidget)^.get_child) then
@@ -14969,6 +15010,66 @@ begin
   Gtk3WidgetSet.AppFocusTimerID := g_timeout_add(Timeout, TGSourceFunc(@Gtk3AppFocusTimerCB), nil);
 end;
 
+procedure Gtk3CSDMinimizeClickedCB(AWidget: PGtkWidget; AData: gpointer); cdecl;
+var
+  AWindow: TGtk3Window;
+  Msg: TLMSize;
+begin
+  AWindow := TGtk3Window(AData);
+  if AWindow.FWaylandIconified then exit;
+  AWindow.FWaylandIconified := True;
+  if not Assigned(AWindow.LCLObject) then exit;
+  FillChar(Msg{%H-}, SizeOf(Msg), 0);
+  Msg.Msg := LM_SIZE;
+  Msg.SizeType := SIZE_MINIMIZED or Size_SourceIsInterface;
+  Msg.Width := Word(AWindow.LCLObject.Width);
+  Msg.Height := Word(AWindow.LCLObject.Height);
+  AWindow.DeliverMessage(Msg);
+  if AWindow.LCLObject = Application.MainForm then
+    Application.IntfAppMinimize;
+end;
+
+procedure Gtk3HookCSDMinimizeButton(AWidget: PGtkWidget; AData: gpointer); cdecl;
+var
+  ACtx: PGtkStyleContext;
+begin
+  if AWidget = nil then exit;
+  ACtx := AWidget^.get_style_context;
+  if Assigned(ACtx) and ACtx^.has_class('titlebutton') and
+    ACtx^.has_class('minimize') then
+  begin
+    if g_object_get_data(PGObject(AWidget), 'lclcsdminimize') = nil then
+    begin
+      g_object_set_data(PGObject(AWidget), 'lclcsdminimize', GPointer(1));
+      g_signal_connect_data(AWidget, 'clicked',
+        TGCallback(@Gtk3CSDMinimizeClickedCB), AData, nil, G_CONNECT_DEFAULT);
+    end;
+  end else
+  if Gtk3IsContainer(PGObject(AWidget)) then
+    PGtkContainer(AWidget)^.forall(TGtkCallback(@Gtk3HookCSDMinimizeButton), AData);
+end;
+
+function Gtk3CSDMinimizeRescanCB(AData: gpointer): gboolean; cdecl;
+var
+  AWindow: TGtk3Widget;
+begin
+  Result := gtk_false;
+  if Gtk3IsWidget(AData) then
+  begin
+    AWindow := TGtk3Widget(g_object_get_data(PGObject(AData), 'lclwidget'));
+    if Assigned(AWindow) and (AWindow is TGtk3Window) then
+      PGtkContainer(AData)^.forall(TGtkCallback(@Gtk3HookCSDMinimizeButton), AWindow);
+  end;
+  g_object_unref(PGObject(AData));
+end;
+
+function Gtk3WindowMapCSDHookCB(AWidget: PGtkWidget; AEvent: PGdkEvent;
+  AData: gpointer): gboolean; cdecl;
+begin
+  Result := False;
+  PGtkContainer(AWidget)^.forall(TGtkCallback(@Gtk3HookCSDMinimizeButton), AData);
+end;
+
 class function TGtk3Window.WindowStateSignal(AWidget: PGtkWidget;
   AEvent: PGdkEvent; AData: gPointer): gboolean; cdecl;
 var
@@ -14977,6 +15078,7 @@ var
   //AScreen: PGdkScreen;
   msk: TGdkWindowState;
   MenuH: gint;
+  AMainForm: Boolean;
 begin
   Result := False;
   FillChar(Msg{%H-}, SizeOf(Msg), #0);
@@ -14986,6 +15088,13 @@ begin
 
   msk:=AEvent^.window_state.changed_mask;
   AState:=AEvent^.window_state.new_window_state;
+
+  if Gtk3WidgetSet.IsWayland and
+    (msk * [GDK_WINDOW_STATE_MAXIMIZED, GDK_WINDOW_STATE_FULLSCREEN, GDK_WINDOW_STATE_TILED] <> []) then
+  begin
+    PGObject(AWidget)^.ref;
+    g_idle_add(@Gtk3CSDMinimizeRescanCB, AWidget);
+  end;
 
   if GDK_WINDOW_STATE_ICONIFIED in msk then
   begin
@@ -15004,6 +15113,20 @@ begin
   end else
   if GDK_WINDOW_STATE_FOCUSED in msk then
   begin
+    if TGtk3Window(AData).FWaylandIconified and
+      (GDK_WINDOW_STATE_FOCUSED in AState) then
+    begin
+      TGtk3Window(AData).FWaylandIconified := False;
+      if Assigned(TGtk3Window(AData).LCLObject) then
+      begin
+        if TGtk3Window(AData).LCLObject = Application.MainForm then
+          Application.IntfAppRestore;
+        Msg.SizeType := SIZE_RESTORED or Size_SourceIsInterface;
+        Msg.Width := Word(TGtk3Window(AData).LCLObject.Width);
+        Msg.Height := Word(TGtk3Window(AData).LCLObject.Height);
+        TGtk3Window(AData).DeliverMessage(Msg);
+      end;
+    end;
     exit;
   end else
   if GDK_WINDOW_STATE_WITHDRAWN in msk then
@@ -15034,7 +15157,17 @@ begin
   {$IFDEF GTK3DEBUGWINDOWSTATE}
   DebugLn('GetWindowState SizeType=',dbgs(Msg.SizeType),' realized ',dbgs(AWidget^.get_realized));
   {$ENDIF}
+  AMainForm := Assigned(Application.MainForm) and
+    (TGtk3Window(AData).LCLObject = Application.MainForm);
+  if AMainForm and
+    (msk * [GDK_WINDOW_STATE_ICONIFIED, GDK_WINDOW_STATE_MAXIMIZED, GDK_WINDOW_STATE_FULLSCREEN] <> []) and
+    not (GDK_WINDOW_STATE_ICONIFIED in AState) and
+    ((AState >< msk) * [GDK_WINDOW_STATE_ICONIFIED, GDK_WINDOW_STATE_MAXIMIZED, GDK_WINDOW_STATE_FULLSCREEN] <> []) then
+    Application.IntfAppRestore;
   TGtk3Window(AData).DeliverMessage(Msg);
+  if AMainForm and (GDK_WINDOW_STATE_ICONIFIED in msk) and
+    (GDK_WINDOW_STATE_ICONIFIED in AState) then
+    Application.IntfAppMinimize;
   // DeliverMessage(Msg);
 end;
 
@@ -15593,11 +15726,32 @@ begin
           PgtkWindow(fWidget)^.unmaximize
         else if GDK_WINDOW_STATE_FULLSCREEN in AState then
           PgtkWindow(fWidget)^.unfullscreen
-        else
+        else if FWaylandIconified then
+        begin
+          fWidget^.hide;
+          fWidget^.show;
+          PgtkWindow(fWidget)^.present;
+        end else
           PgtkWindow(fWidget)^.show;
+        if FWaylandIconified then
+        begin
+          FWaylandIconified := False;
+          if Assigned(LCLObject) and (LCLObject = Application.MainForm) then
+            Application.IntfAppRestore;
+        end;
       end;
     SW_SHOWMAXIMIZED: PgtkWindow(fWidget)^.maximize;
-    SW_MINIMIZE: PgtkWindow(fWidget)^.iconify;
+    SW_MINIMIZE:
+      begin
+        PgtkWindow(fWidget)^.iconify;
+        if Gtk3WidgetSet.IsWayland and fWidget^.get_mapped and
+          not FWaylandIconified then
+        begin
+          FWaylandIconified := True;
+          if Assigned(LCLObject) and (LCLObject = Application.MainForm) then
+            Application.IntfAppMinimize;
+        end;
+      end;
     SW_SHOWFULLSCREEN: PgtkWindow(fWidget)^.fullscreen;
   else
     PgtkWindow(fWidget)^.show;
@@ -15839,6 +15993,9 @@ begin
   end;
 
   g_signal_connect_data(Result,'window-state-event', TGCallback(@WindowStateSignal), Self, nil, G_CONNECT_DEFAULT);
+
+  if Gtk3WidgetSet.IsWayland and Gtk3IsGtkWindow(Result) then
+    g_signal_connect_data(Result, 'map-event', TGCallback(@Gtk3WindowMapCSDHookCB), Self, nil, G_CONNECT_DEFAULT);
 
   //notify::is-active: dispatches LM_ACTIVATE for form-level activate/deactivate.
   g_signal_connect_data(Result, 'notify::is-active', TGCallback(@TrackWindowActivate), Self, nil, G_CONNECT_DEFAULT);

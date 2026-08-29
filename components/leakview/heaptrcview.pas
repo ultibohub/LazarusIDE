@@ -11,11 +11,11 @@ uses
   // LazUtils
   FileUtil, LazFileUtils,
   // IDEIntf
-  LazIDEIntf, MenuIntf, ToolBarIntf, IDECommands,
+  LazIDEIntf, MenuIntf, ToolBarIntf, IDECommands, SrcEditorIntf,
   // BuildIntf
   ProjectIntf,
   // LeakView
-  LeakInfo;
+  LeakInfo, SynEdit;
 
 type
   TJumpProc = procedure (Sender: TObject; const SourceName: string;
@@ -104,6 +104,9 @@ resourcestring
   sfrmCap = 'Leaks and Traces - HeapTrc and GDB backtrace output viewer';
   sfrmSelectFileWithDebugInfo = 'Select file with debug info';
   sfrmSelectTrcFile = 'Select file with trace log';
+  brkFailedToOpenFile = 'Failed to open file';
+  brkFailedToOpenSJumpToCurren = 'Failed to open "%s". Jump to appropriate line in current editor instead?';
+  brkFailedToOpenS = 'Failed to open "%s".';
 
 var
   HeapTrcViewForm: THeapTrcViewForm = nil;
@@ -387,6 +390,11 @@ begin
   finally
     trvTraceInfo.EndUpdate;
   end;
+  if trvTraceInfo.Items.Count <> 0 then
+  begin
+    trvTraceInfo.SetFocus;
+    trvTraceInfo.Items.GetFirstNode.Selected := true;
+  end;
   if trvTraceInfo.Items.TopLvlCount = 1 then
     trvTraceInfo.Items.TopLvlItems[0].Expand(False);
 end;
@@ -595,6 +603,8 @@ procedure THeapTrcViewForm.LazarusJump(Sender: TObject;
   const SourceFile: string; Line, Column: Integer);
 var
   nm  , SrcFile: string;
+  r: boolean;
+  e: TSourceEditorInterface;
 begin
   SrcFile := SourceFile;
   if not FileExistsUTF8(SrcFile) then begin
@@ -604,9 +614,32 @@ begin
       nm := SrcFile;
   end else
     nm := SrcFile;
+
+  r := False;
   try
-    LazarusIDE.DoOpenFileAndJumpToPos(nm, Point(Column, Line), -1, -1, -1, [ofOnlyIfExists, ofRegularFile]);
+    r := LazarusIDE.DoOpenFileAndJumpToPos(nm, Point(Column, Line), -1, -1, -1, [ofOnlyIfExists, ofRegularFile, ofQuiet]) = mrOK;
   except
+  end;
+  if not r then begin
+    try
+      nm := LazarusIDE.FindSourceFile(SrcFile, '', [fsfSearchForProject, fsfUseDebugPath, fsfMapTempToVirtualFiles, fsfUseIncludePaths, fsfWrongLeftPath, fsReturnFullPath] );
+      if nm <> '' then
+        r := LazarusIDE.DoOpenFileAndJumpToPos(nm, Point(Column, Line), -1, -1, -1, [ofOnlyIfExists, ofRegularFile, ofQuiet]) = mrOK;
+    except
+    end;
+  end;
+  if not r then begin
+    e := SourceEditorManagerIntf.ActiveEditor;
+    if e = nil then
+      QuestionDlg(brkFailedToOpenFile,
+        Format(brkFailedToOpenS, [SourceFile]),
+        mtError, [mrOK], 0)
+    else
+    if QuestionDlg(brkFailedToOpenFile,
+      Format(brkFailedToOpenSJumpToCurren, [SourceFile]),
+      mtError, [mrYes, mrNo], 0) = mrYes
+    then
+      LazarusIDE.DoJumpToCodePosition(e, 1, Line, -1, -1 ,-1);
   end;
 end;
 

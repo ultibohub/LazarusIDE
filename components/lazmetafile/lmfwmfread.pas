@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FPImage,
-  LConvEncoding, LCLIntf, LCLType, Graphics, IntfGraphics,
+  LConvEncoding, LCLIntf, LCLType, GraphType, Graphics, IntfGraphics,
   lmf, lmfObj, lmfWMF;
 
 type
@@ -22,6 +22,7 @@ type
     // info from header
     FBBox: TRect;  // in metafile units as specified by UnitsPerInch. NOTE: "logical" units can be different!
     FHasPlaceableMetaHeader: Boolean;
+    FLogOrgX, FLogOrgY, FLogWidth, FLogHeight: Integer;
     // state
     FCurrPen: TPen;
     FCurrBrush: TBrush;
@@ -32,15 +33,14 @@ type
     FCurrTextColor: TColor;
     FCurrPolyFillMode: Word;
     FMapMode: Word;
-    FWindowOrigin: TPoint;
-    FWindowExtent: TPoint;
+    // Bitmap transparency mask
     FMaskBmp: TBitmap;
 
     function CreateBrush(const AParams: TWMFParamArray): Integer;
     function CreateFont(const AParams: TWMFParamArray): Integer;
     function CreatePen(const AParams: TWMFParamArray): Integer;
     procedure DeleteObj(const AParams: TWMFParamArray);
-    procedure MeasureWindowExtent;
+    procedure MeasureLogExtent;
     procedure ReadArc(const AParams: TWMFParamArray);
     procedure ReadBkColor(const AParams: TWMFParamArray);
     procedure ReadBkMode(const AParams: TWMFParamArray);
@@ -48,8 +48,11 @@ type
     function  ReadColor(const AParams: TWMFParamArray; AIndex: Integer): TColor;
     procedure ReadDIBStretchBlt(const AParams: TWMFParamArray);
     procedure ReadEllipse(const AParams: TWMFParamArray);
+    procedure ReadExtFloodFill(const AParams: TWMFParamArray);
     procedure ReadExtTextOut(const AParams: TWMFParamArray);
-    function ReadImage(const AParams: TWMFParamArray; AIndex: Integer; APicture: TPicture): Boolean;
+    procedure ReadFloodFill(const AParams: TWMFParamArray);
+    function ReadImage(const AParams: TWMFParamArray; AIndex: Integer; APicture: TPicture;
+      AlwaysLoadImage: Boolean = false): Boolean;
     procedure ReadLineTo(const AParams: TWMFParamArray);
     procedure ReadMapMode(const AParams: TWMFParamArray);
     procedure ReadMoveTo(const AParams: TWMFParamArray);
@@ -57,8 +60,11 @@ type
     procedure ReadPie(const AParams: TWMFParamArray);
     procedure ReadPolyFillMode(const AParams: TWMFParamArray);
     procedure ReadPolygon(const AParams: TWMFParamArray; Filled: Boolean);
+    procedure ReadPolyPolygon(const AParams: TWMFParamArray);
     procedure ReadRectangle(const AParams: TWMFParamArray);
     procedure ReadRoundRect(const AParams: TWMFParamArray);
+    procedure ReadSetDIBtoDEV(const AParams: TWMFParamArray);
+    procedure ReadSetPixel(const AParams: TWMFParamArray);
     procedure ReadStretchDIB(const AParams: TWMFParamArray);
     function ReadString(const AParams: TWMFParamArray; AStartIndex, ALength: Integer): String;
     procedure ReadTextAlign(const AParams: TWMFParamArray);
@@ -162,6 +168,9 @@ begin
   lmfBrush := TlmfBrush.Create(nil);
   brushRec := PWMFBrushRecord(@AParams[0]);
 
+  // Brush color (must be set before Style, otherwise style would be reset to solid)
+  lmfBrush.Brush.Color := RGBToColor(brushRec^.ColorRED, brushRec^.ColorGREEN, brushRec^.ColorBLUE);
+
   // Brush style
   case LEToN(brushRec^.Style) of
     BS_SOLID:
@@ -172,7 +181,7 @@ begin
       case brushRec^.Hatch of
         HS_HORIZONTAL : lmfBrush.Brush.Style := bsHorizontal;
         HS_VERTICAL   : lmfBrush.Brush.Style := bsVertical;
-        HS_FDIAGONAL  : lmfBrush.brush.Style := bsFDiagonal;
+        HS_FDIAGONAL  : lmfBrush.Brush.Style := bsFDiagonal;
         HS_BDIAGONAL  : lmfBrush.Brush.Style := bsBDiagonal;
         HS_CROSS      : lmfBrush.Brush.Style := bsCross;
         HS_DIAGCROSS  : lmfBrush.Brush.Style := bsDiagCross;
@@ -189,14 +198,11 @@ begin
       lmfBrush.Brush.Style := bsSolid;
   end;
 
-  // Brush color
-  lmfBrush.Brush.Color := RGBToColor(brushRec^.ColorRED, brushRec^.ColorGREEN, brushRec^.ColorBLUE);
-
   // Add to meta file
   FImage.List.InsertComponent(lmfBrush);
 
   // Add to WMF object list
-  Result := FObjTable.Add(lmfBrush);
+  Result := AddToObjTable(lmfBrush);
 end;
 
 function TlmfWMFReader.CreateFont(const AParams: TWMFParamArray): Integer;
@@ -225,11 +231,11 @@ begin
   lmfFont.Font.StrikeThrough := fontRec^.Strikeout <> 0;
   lmfFont.Font.Orientation := LEToN(fontRec^.Escapement);  // Do not use fontRec^.Orientation here!
 
-  // Add to WMF object list
-  Result := FObjTable.Add(lmfFont);
-
   // Add to metafile list
   FImage.List.InsertComponent(lmfFont);
+
+  // Add to WMF object list
+  Result := AddToObjTable(lmfFont);
 end;
 
 function TlmfWMFReader.CreatePen(const AParams: TWMFParamArray): Integer;
@@ -269,11 +275,11 @@ begin
   // Pen color
   lmfPen.Pen.Color := RGBToColor(penRec^.ColorRED, penRec^.ColorGREEN, penRec^.ColorBLUE);
 
-  // Add to WMF object list
-  Result := FObjTable.Add(lmfPen);
-
   // Add to metafile image
   FImage.List.InsertComponent(lmfPen);
+
+  // Add to WMF object list
+  Result := AddToObjTable(lmfPen);
 end;
 
 procedure TlmfWMFReader.DeleteFromObjTable(AIndex: Integer);
@@ -305,10 +311,10 @@ end;
   later crash drawing. In this case, iterate over all records and try to
   measure the size of the window.
   TO BE IMPLEMENTED. }
-procedure TlmfWMFReader.MeasureWindowExtent;
+procedure TlmfWMFReader.MeasureLogExtent;
 begin
-  FImage.Width := 5000;    // just using dummy values so far.
-  FImage.Height := 5000;
+  FLogWidth := 5000;    // just using dummy values so far.
+  FLogHeight := 5000;
 end;
 
 procedure TlmfWMFReader.ReadArc(const AParams: TWMFParamArray);
@@ -444,6 +450,22 @@ begin
   FImage.List.InsertComponent(lmfEllipse);
 end;
 
+procedure TlmfWMFReader.ReadExtFloodFill(const AParams: TWMFParamArray);
+var
+  x, y: Integer;
+  fillStyle: TFillStyle;
+  fillColor: TColor;
+  lmfFloodFill: TlmfFloodFill;
+begin
+  fillStyle := TFillStyle(1 - LEToN(AParams[0]));
+  fillColor := ReadColor(AParams, 1);
+  y := SmallInt(LEToN(AParams[3]));
+  x := SmallInt(LEToN(AParams[4]));
+
+  lmfFloodFill := TlmfFloodFill.Create(x, y, fillColor, fillStyle);
+  FImage.List.InsertComponent(lmfFloodFill);
+end;
+
 procedure TlmfWMFReader.ReadExtTextOut(const AParams: TWMFParamArray);
 var
   x, y, len, opts: Integer;
@@ -456,14 +478,17 @@ begin
   x := SmallInt(LEToN(AParams[1]));
   len := SmallInt(LEToN(AParams[2]));
   opts := LEToN(AParams[3]);
-  if opts <> 0 then begin
+  if opts and (ETO_OPAQUE or ETO_CLIPPED) <> 0 then begin
     R.Bottom := SmallInt(LEToN(AParams[4]));
     R.Right := SmallInt(LEToN(AParams[5]));
     R.Top := SmallInt(LEToN(AParams[6]));
     R.Left := SmallInt(LEToN(AParams[7]));
     txt := ReadString(AParams, 8, len);
   end else
+  begin
     txt := ReadString(AParams, 4, len);
+    R := Rect(x, y, x, y);
+  end;
   // We ignore the Dx fields
 
   txtStyle := Default(TTextStyle);
@@ -483,6 +508,22 @@ begin
 
   item := TlmfTextInRect.Create(R, x, y, txt, txtStyle);
   FImage.List.InsertComponent(item);
+end;
+
+procedure TlmfWMFReader.ReadFloodFill(const AParams: TWMFParamArray);
+var
+  x, y: Integer;
+  fillStyle: TFillStyle;
+  fillColor: TColor;
+  lmfFloodFill: TlmfFloodFill;
+begin
+  fillStyle := fsBorder;
+  fillColor := ReadColor(AParams, 0);
+  y := SmallInt(LEToN(AParams[2]));
+  x := SmallInt(LEToN(AParams[3]));
+
+  lmfFloodFill := TlmfFloodFill.Create(x, y, fillColor, fillStyle);
+  FImage.List.InsertComponent(lmfFloodFill);
 end;
 
 procedure TlmfWMFReader.ReadFromStream(AStream: TStream; AImage: TlmfImage);
@@ -544,7 +585,7 @@ begin
 end;
 
 function TlmfWMFReader.ReadImage(const AParams: TWMFParamArray;
-  AIndex: Integer; APicture: TPicture): Boolean;
+  AIndex: Integer; APicture: TPicture; AlwaysLoadImage: Boolean = false): Boolean;
 var
   bmpInfoHdr: PBitmapInfoHeader = nil;
   bmpFileHdr: TBitmapFileHeader;
@@ -615,6 +656,10 @@ begin
           end;
         end else
           APicture.LoadFromStream(memstream);
+
+      otherwise
+        if AlwaysLoadImage then // in case of META_SetDIBtoDEVRecord:
+          APicture.LoadFromStream(memstream);
     end;
     Result := true;
 
@@ -653,8 +698,8 @@ end;
 
 procedure TlmfWMFReader.ReadOffsetWindowOrg(const AParams: TWMFParamArray);
 begin
-  FWindowOrigin.Y := FWindowOrigin.Y + SmallInt(LEToN(AParams[0]));
-  FWindowOrigin.X := FWindowOrigin.X + SmallInt(LEToN(AParams[1]));
+  FImage.LogOriginY := FImage.LogOriginY + SmallInt(LEToN(AParams[0]));
+  FImage.LogOriginX := FImage.LogOriginX + SmallInt(LEToN(AParams[1]));
 end;
 
 procedure TlmfWMFReader.ReadPie(const AParams: TWMFParamArray);
@@ -716,6 +761,77 @@ begin
   FImage.List.InsertComponent(item);
 end;
 
+{ Reads a series of closed polygons which can contain holes.
+  See https://wiki.freepascal.org/Developing_with_Graphics#Polygon_with_a_hole
+  how this is handled by the LCL. }
+procedure TlmfWMFReader.ReadPolyPolygon(const AParams: TWMFParamArray);
+var
+  numPolygons: word;
+  numPtsPerPolygon: array of word;
+  pts: TPointArray;
+  startPts: TPointArray;
+  P: TPoint;
+  i, j, k, numPts: Integer;
+  item: TlmfPolygon;
+  penStyle: TPenStyle;
+begin
+  numPolygons := LEToN(AParams[0]);
+
+  SetLength(numPtsPerPolygon, numPolygons);
+  SetLength(startPts, numPolygons);
+  numPts := 0;
+  k := 1;    // k is the index into the AParams array.
+  for i := 0 to numPolygons-1 do
+  begin
+    numPtsPerPolygon[i] := LEToN(AParams[k]);
+    inc(numPts, numPtsPerPolygon[i]);
+    inc(k);
+  end;
+
+  // Set length of points array, but overdimension to take care of the fact
+  // that each polygon may need to be closed explicitely.
+  SetLength(pts, numPts + Length(startPts)*2);
+
+  // Read points of each polygon from params array
+  numPts := 0;
+  for i := 0 to numPolygons-1 do
+  begin
+    for j := 0 to numPtsPerPolygon[i]-1 do
+    begin
+      P.X := SmallInt(LEToN(AParams[k]));
+      P.Y := SmallInt(LEToN(AParams[k+1]));
+      pts[numPts] := P;
+      if j = 0 then
+        // Remember the start points of each polygon
+        startPts[i] := P;
+      inc(k, 2);
+      inc(numPts);
+    end;
+    // Close polygon if required.
+    if not (pts[numPts-1] = startPts[i]) then
+    begin
+      pts[numPts] := startPts[i];
+      inc(numPts);
+    end;
+  end;
+
+  // Now define the "retreat" back to the very start point.
+  // See wiki article https://wiki.freepascal.org/Developing_with_Graphics#Polygon_with_a_hole
+  // why this is needed.
+  for i := Length(startPts)-2 downto 0 do
+  begin
+    pts[numPts] := startPts[i];
+    inc(numPts);
+  end;
+
+  // Fix length of points array
+  SetLength(pts, numPts);
+
+  // Add the polygon to the metafile image.
+  item := TlmfPolygon.Create(@pts[0], numPts, false, numPolygons-1);
+  FImage.List.InsertComponent(item);
+end;
+
 procedure TlmfWMFReader.ReadRecords(AStream: TStream);
 var
   recordStartPos: Int64;
@@ -767,11 +883,11 @@ begin
         ;
       META_DIBSTRETCHBLT:
         ;
-      META_SETDIBTODEV:
-        ;
       META_STRETCHBLT:
         ;
       }
+      META_SETDIBTODEV:
+        ReadSetDIBtoDEV(params);
       META_STRETCHDIB:
         ReadStretchDIB(params);
       META_DIBSTRETCHBLT:
@@ -785,13 +901,13 @@ begin
       META_ELLIPSE:
         ReadEllipse(params);
       META_EXTFLOODFILL:
-        ;
+        ReadExtFloodFill(params);
       META_EXTTEXTOUT:
         ReadExtTextOut(params);
       META_FILLREGION:
         ;
       META_FLOODFILL:
-        ;
+        ReadFloodFill(params);
       META_FRAMEREGION:
         ;
       META_INVERTREGION:
@@ -810,16 +926,14 @@ begin
         ReadPolygon(params, true);
       META_POLYLINE:
         ReadPolygon(params, false);
-      {
       META_POLYPOLYGON:
-        ReadPolyPolygon(page, params);
-        }
+        ReadPolyPolygon(params);
       META_RECTANGLE:
         ReadRectangle(params);
       META_ROUNDRECT:
         ReadRoundRect(params);
       META_SETPIXEL:
-        ;
+        ReadSetPixel(params);
       META_TEXTOUT:
         ReadTextOut(params);
 
@@ -917,8 +1031,10 @@ begin
     AStream.Position := recordStartPos + Int64(wmfRec.Size) * SIZE_OF_WORD;
   end;
 
-  if (FImage.Width = 0) and (FImage.Height = 0) then
-    MeasureWindowExtent;
+  if (FLogWidth = 0) and (FLogHeight = 0) then
+    MeasureLogExtent;
+
+  FImage.SetLogBounds(FLogOrgX, FLogOrgY, FLogWidth, FLogHeight);
 end;
 
 procedure TlmfWMFReader.ReadRectangle(const AParams: TWMFParamArray);
@@ -956,6 +1072,51 @@ begin
   RY := SmallInt(LEToN(roundRectRec^.RY));
   lmfItem := TlmfRoundRect.Create(R, RX, RY);
   FImage.List.InsertComponent(lmfItem);
+end;
+
+procedure TlmfWMFReader.ReadSetDIBtoDEV(const AParams: TWMFParamArray);
+var
+  rec: PWMFSetDIBtoDEVRecord;
+  lmfPic: TlmfPicture;
+  w, h: Word;
+  R: TRect;
+begin
+  rec := PWMFSetDIBToDEVRecord(@AParams[0]);
+  lmfPic := TlmfPicture.Create(nil);
+  try
+    w := LEToN(rec^.Width);
+    h := LEToN(rec^.Height);
+    R.Left := LEToN(rec^.xDIB);
+    R.Top := LEToN(rec^.yDIB);
+    R.Right := R.Left + w;
+    R.Bottom := R.Top + h;
+    lmfPic.Clip := R;
+    if not ReadImage(AParams, SizeOf(TWMFSetDIBtoDEVRecord) div SIZE_OF_WORD, lmfPic.Picture, true) then
+      exit;
+    FImage.List.InsertComponent(lmfPic);
+  except
+    on E:Exception do begin
+      FreeAndNil(lmfPic);
+      LogError('Image reading error: ' + E.Message);
+    end;
+  end;
+end;
+
+procedure TlmfWMFReader.ReadSetPixel(const AParams: TWMFParamArray);
+var
+  ptRec: PWMFPointRecord;
+  clrRec: PWMFColorRecord;
+  item: TlmfColor;
+begin
+  clrRec := PWMFColorRecord(@AParams[0]);
+  ptRec := PWMFPointRecord(@AParams[2]);
+
+  item := TlmfColor.Create(LEToN(ptRec^.X), LEToN(ptRec^.Y), colBlack);
+  item.r := clrRec^.ColorRED shl 8;
+  item.g := clrRec^.ColorGREEN shl 8;
+  item.b := clrRec^.ColorBLUE shl 8;
+  item.a := clrRec^.Reserved shl 8;
+  FImage.List.InsertComponent(item);
 end;
 
 procedure TlmfWMFReader.ReadStretchDIB(const AParams: TWMFParamArray);
@@ -1038,22 +1199,20 @@ end;
 
 procedure TlmfWMFReader.ReadWindowExt(const AParams: TWMFParamArray);
 begin
-  FWindowExtent.Y := SmallInt(LEToN(AParams[0]));
-  FWindowExtent.X := SmallInt(LEToN(AParams[1]));
-  FImage.Width := FWindowExtent.X;
-  FImage.Height := FWindowExtent.Y;
+  FLogHeight := SmallInt(LEToN(AParams[0]));
+  FLogWidth := SmallInt(LEToN(AParams[1]));
 end;
 
 procedure TlmfWMFReader.ReadWindowOrg(const AParams: TWMFParamArray);
 begin
-  FWindowOrigin.Y := SmallInt(LEToN(AParams[0]));
-  FWindowOrigin.X := SmallInt(LEToN(AParams[1]));
+  FLogOrgY := SmallInt(LEToN(AParams[0]));
+  FLogOrgX := SmallInt(LEToN(AParams[1]));
 end;
 
 procedure TlmfWMFReader.SelectObj(const AParams: TWMFParamArray);
 var
   idx: Integer;
-  item: TlmfObject;
+  item, newItem: TlmfObject;
 begin
   idx := LEToN(AParams[0]);
   if (idx < 0) or (idx >= FObjTable.Count) then
@@ -1074,6 +1233,8 @@ begin
   if obj is TFPPalette then
     FCurrPalette := TFPPalette(obj);
     };
+  newItem := TlmfSelectObject.Create(item);
+  FImage.List.InsertComponent(newItem);
 end;
 
 end.

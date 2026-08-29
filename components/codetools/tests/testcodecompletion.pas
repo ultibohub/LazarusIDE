@@ -1,3 +1,10 @@
+{
+ Test with:
+     ./runtests --format=plain --suite=TTestCodeCompletion
+     ./runtests --format=plain --suite=TTestCodeCompletion.TestCompleteLocalVarForLoop
+
+}
+
 unit TestCodeCompletion;
 
 {$mode objfpc}{$H+}
@@ -53,6 +60,7 @@ type
     procedure TestCompleteProperty_TypeGenericDelphi;
     procedure TestCompleteProperty_GenericObjFPC;
     procedure TestCompleteProperty_GenericDelphi;
+    procedure TestCompleteProperty_Pointer;
     // class completion: insert first method body between other classes
     procedure TestCompleteClass_Unit_NewClass;
     procedure TestCompleteClass_Unit_NewClass_BehindOldClass;
@@ -80,6 +88,16 @@ type
 
     // declare local variable
     procedure TestCompleteVariableWithSpecializedType;
+    procedure TestCompleteLocalVar_ForLoop;
+    procedure TestCompleteLocalVar_ForLoopInProc;
+    procedure TestCompleteLocalVar_Enum;
+    procedure TestCompleteLocalVar_EnumUsedUnit;
+    procedure TestCompleteLocalVar_EnumUsedUnitOverload;
+    procedure TestCompleteLocalVar_EnumInClass;
+    procedure TestCompleteLocalVar_EnumInClass2;
+    procedure TestCompleteLocalVarForAnonymousFunction1;
+    procedure TestCompleteLocalVarForAnonymousFunction2;
+
     // complete event assignment
     procedure TestCompleteEventAssignmentDelphi;
     procedure TestCompleteEventAssignmentObjFPC;
@@ -1873,6 +1891,37 @@ begin
     'end.']);
 end;
 
+procedure TTestCodeCompletion.TestCompleteProperty_Pointer;
+begin
+  Test('TestCompleteProperty_Pointer',
+    ['program test1;',
+    '{$mode delphi}{$H+}',
+    '{$ModeSwitch AUTODEREF+}',
+    'type',
+    '  TTest = class',
+    '    function GetMyInt(const aIndex: Integer): PInteger;',
+    '    property MyInt[const aIndex: Integer]: PInteger read GetMyInt;',
+    '  end;',
+    'var t: TTest;',
+    'begin',
+    '  p := t.MyInt[1];',
+    'end.'],
+    11,3,
+    ['program test1;',
+    '{$mode delphi}{$H+}',
+    '{$ModeSwitch AUTODEREF+}',
+    'type',
+    '  TTest = class',
+    '    function GetMyInt(const aIndex: Integer): PInteger;',
+    '    property MyInt[const aIndex: Integer]: PInteger read GetMyInt;',
+    '  end;',
+    'var t: TTest;',
+    '  p: PInteger;',
+    'begin',
+    '  p := t.MyInt[1];',
+    'end.']);
+end;
+
 procedure TTestCodeCompletion.TestCompleteProperty_GenericDelphi;
 begin
   Test('TestCompleteProperty_GenericDelphi',
@@ -1951,6 +2000,224 @@ begin
     '  List: TList;',
     'begin',
     '  List := TClass(Base).List;',
+    'end.']);
+end;
+
+procedure TTestCodeCompletion.TestCompleteLocalVar_ForLoop;
+begin
+  Test('TestCompleteLocalVar_ForLoop',
+    ['program Project1;',
+    '{$mode objfpc}{$H+}',
+    'begin',
+    '  for i:=1 to 3 do ;',
+    'end.'],
+    4,7,
+    ['program Project1;',
+    '{$mode objfpc}{$H+}',
+    'var',
+    '  i: Integer;',
+    'begin',
+    '  for i:=1 to 3 do ;',
+    'end.']);
+end;
+
+procedure TTestCodeCompletion.TestCompleteLocalVar_ForLoopInProc;
+begin
+  Test('TestCompleteLocalVarFor_LoopInProc',
+    ['program Project1;',
+    '{$mode objfpc}{$H+}',
+    'procedure Fly;',
+    'begin',
+    '  for i:=1 to 3 do ;',
+    'end;',
+    'begin',
+    'end.'],
+    5,7,
+    ['program Project1;',
+    '{$mode objfpc}{$H+}',
+    'procedure Fly;',
+    'var',
+    '  i: Integer;',
+    'begin',
+    '  for i:=1 to 3 do ;',
+    'end;',
+    'begin',
+    'end.']);
+end;
+
+procedure TTestCodeCompletion.TestCompleteLocalVar_Enum;
+begin
+  Test('TestCompleteLocalVar_Enum',
+    ['program Project1;',
+    '{$mode objfpc}{$H+}',
+    'type TColor = (red,blue);',
+    'procedure Fly;',
+    'begin',
+    '  c:=Red;',
+    'end;',
+    'begin',
+    'end.'],
+    6,3,
+    ['program Project1;',
+    '{$mode objfpc}{$H+}',
+    'type TColor = (red,blue);',
+    'procedure Fly;',
+    'var',
+    '  c: TColor;',
+    'begin',
+    '  c:=Red;',
+    'end;',
+    'begin',
+    'end.']);
+end;
+
+procedure TTestCodeCompletion.TestCompleteLocalVar_EnumUsedUnit;
+var
+  RedUnit: TCodeBuffer;
+begin
+  RedUnit:=CodeToolBoss.CreateFile('unit1.pas');
+  try
+    RedUnit.Source:=
+      'unit unit1;'+LineEnding
+      +'interface'+LineEnding
+      +'type TColor = (red,blue);'+LineEnding
+      +'implementation'+LineEnding
+      +'end.'+LineEnding;
+
+  Test('TestCompleteLocalVar_EnumUsedUnit',
+    ['program Project1;',
+    '{$mode objfpc}{$H+}',
+    'uses Unit1;',
+    'procedure Fly;',
+    'begin',
+    '  c:=Red;',
+    'end;',
+    'begin',
+    'end.'],
+    6,3,
+    ['program Project1;',
+    '{$mode objfpc}{$H+}',
+    'uses Unit1;',
+    'procedure Fly;',
+    'var',
+    '  c: TColor;',
+    'begin',
+    '  c:=Red;',
+    'end;',
+    'begin',
+    'end.']);
+  finally
+    RedUnit.IsDeleted:=true;
+  end;
+end;
+
+procedure TTestCodeCompletion.TestCompleteLocalVar_EnumUsedUnitOverload;
+var
+  RedUnit: TCodeBuffer;
+begin
+  RedUnit:=CodeToolBoss.CreateFile('unit1.pas');
+  try
+    RedUnit.Source:=
+      'unit Unit1;'+LineEnding
+      +'interface'+LineEnding
+      +'type TColor = (red,blue);'+LineEnding
+      +'implementation'+LineEnding
+      +'end.'+LineEnding;
+
+  Test('TestCompleteLocalVar_EnumUsedUnitOverload',
+    ['program Project1;',
+    '{$mode objfpc}{$H+}',
+    'uses Unit1;',
+    'type TColor = word;',
+    'procedure Fly;',
+    'begin',
+    '  c:=Red;',
+    'end;',
+    'begin',
+    'end.'],
+    7,3,
+    ['program Project1;',
+    '{$mode objfpc}{$H+}',
+    'uses Unit1;',
+    'type TColor = word;',
+    'procedure Fly;',
+    'var',
+    '  c: Unit1.TColor;',
+    'begin',
+    '  c:=Red;',
+    'end;',
+    'begin',
+    'end.']);
+  finally
+    RedUnit.IsDeleted:=true;
+  end;
+end;
+
+procedure TTestCodeCompletion.TestCompleteLocalVar_EnumInClass;
+begin
+  Test('TestCompleteLocalVar_EnumInClass',
+    ['program Project1;',
+    '{$mode objfpc}{$H+}',
+    'type',
+    '  TBird = class',
+    '  public type TColor = (red,green);',
+    '  end;',
+    'procedure Fly;',
+    'begin',
+    '  c:=Red;',
+    'end;',
+    'begin',
+    'end.'],
+    9,3,
+    ['program Project1;',
+    '{$mode objfpc}{$H+}',
+    'type',
+    '  TBird = class',
+    '  public type TColor = (red,green);',
+    '  end;',
+    'procedure Fly;',
+    'var',
+    '  c: TBird.TColor;',
+    'begin',
+    '  c:=Red;',
+    'end;',
+    'begin',
+    'end.']);
+end;
+
+procedure TTestCodeCompletion.TestCompleteLocalVar_EnumInClass2;
+begin
+  Test('TestCompleteLocalVar_EnumInClass2',
+    ['program Project1;',
+    '{$mode objfpc}{$H+}',
+    'type',
+    '  TBird = class',
+    '  public',
+    '    type TColor = (red,green);',
+    '    procedure Fly;',
+    '  end;',
+    'procedure TBird.Fly;',
+    'begin',
+    '  c:=Red;',
+    'end;',
+    'begin',
+    'end.'],
+    11,3,
+    ['program Project1;',
+    '{$mode objfpc}{$H+}',
+    'type',
+    '  TBird = class',
+    '  public',
+    '    type TColor = (red,green);',
+    '    procedure Fly;',
+    '  end;',
+    'procedure TBird.Fly;',
+    'var',
+    '  c: TColor;',
+    'begin',
+    '  c:=Red;',
+    'end;',
+    'begin',
     'end.']);
 end;
 
@@ -2410,6 +2677,102 @@ begin
   '',
   'end;',
   '',
+  'end.'
+  ]);
+end;
+
+procedure TTestCodeCompletion.TestCompleteLocalVarForAnonymousFunction1;
+begin
+  Test('CompleteLocalVarForAnonymousFunction1',
+  ['unit Unit1;',
+  '{$mode objfpc}',
+  '{$modeswitch anonymousfunctions}',
+  '{$modeswitch functionreferences}',
+  'interface',
+  'type',
+  'TProc = reference to procedure;',
+  'procedure DoSomething(aProc: TProc);',
+  'implementation',
+  'begin',
+  '  DoSomething(',
+  '    procedure',
+  '    begin',
+  '      I := 1;',
+  '    end);',
+  'end.'
+  ],
+  14,6,
+  ['unit Unit1;',
+  '{$mode objfpc}',
+  '{$modeswitch anonymousfunctions}',
+  '{$modeswitch functionreferences}',
+  'interface',
+  'type',
+  'TProc = reference to procedure;',
+  'procedure DoSomething(aProc: TProc);',
+  'implementation',
+  'begin',
+  '  DoSomething(',
+  '    procedure',
+  '    var',
+  '      I: Integer;',
+  '    begin',
+  '      I := 1;',
+  '    end);',
+  'end.'
+  ]);
+end;
+
+procedure TTestCodeCompletion.TestCompleteLocalVarForAnonymousFunction2;
+begin
+  Test('CompleteLocalVarForAnonymousFunction2',
+  ['unit Unit1;',
+  '{$mode objfpc}',
+  '{$modeswitch anonymousfunctions}',
+  '{$modeswitch functionreferences}',
+  'interface',
+  'type',
+  'TProc = reference to procedure;',
+  'procedure DoSomething(aProc: TProc);',
+  'implementation',
+  'begin',
+  '  DoSomething(',
+  '    procedure',
+  '    begin',
+  '      DoSomething(',
+  '        procedure',
+  '        begin',
+  '          begin',
+  '            I := 1;',
+  '          end',
+  '        end);',
+  '    end);',
+  'end.'
+  ],
+  18,13,
+  ['unit Unit1;',
+  '{$mode objfpc}',
+  '{$modeswitch anonymousfunctions}',
+  '{$modeswitch functionreferences}',
+  'interface',
+  'type',
+  'TProc = reference to procedure;',
+  'procedure DoSomething(aProc: TProc);',
+  'implementation',
+  'begin',
+  '  DoSomething(',
+  '    procedure',
+  '    begin',
+  '      DoSomething(',
+  '        procedure',
+  '        var',
+  '          I: Integer;',
+  '        begin',
+  '          begin',
+  '            I := 1;',
+  '          end',
+  '        end);',
+  '    end);',
   'end.'
   ]);
 end;

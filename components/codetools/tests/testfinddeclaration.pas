@@ -11,6 +11,10 @@
    ./testcodetools --suite=TestFindDeclaration_ObjCCategory
    ./testcodetools --suite=TestFindDeclaration_Generics
    ./testcodetools --suite=TestFindDeclaration_FileAtCursor
+   ./testcodetools --suite=TestFindDeclarationPathAt_Basic
+   ./testcodetools --suite=TestFindDeclarationPathAt_Generics
+   ./testcodetools --suite=TestFindDeclarationPathAt_UnitPrefix
+   ./testcodetools --suite=TestFindDeclarationPathAt_Flags
 
  FPC tests:
    ./testcodetools --suite=TestFindDeclaration_FPCTests
@@ -51,6 +55,12 @@
     {guesstype:
       Tests: CodeToolBoss.GuessTypeOfIdentifier
 
+    {vartype:
+      Tests: CodeToolBoss.CompletCode - what will be inserted for a new var
+
+    {anytype:
+      Tests: guesstype and vartype / both for the same expectation
+
     {findrefs:XYLIST
       XYLIST=x,y;x,y;...
       Tests: CodeToolBoss.FindReferences
@@ -89,7 +99,7 @@ uses
   // CodeTools
   CodeToolManager, ExprEval, CodeCache, BasicCodeTools, FileProcs,
   CustomCodeTool, CodeTree, FindDeclarationTool, KeywordFuncLists,
-  IdentCompletionTool, DefineTemplates, DirectoryCacher, CTUnitGraph,
+  IdentCompletionTool, DefineTemplates, DirectoryCacher, CTUnitGraph, SourceLog,
   // (project)
   TestPascalParser, TestGlobals;
 
@@ -127,6 +137,8 @@ type
     FMainCode: TCodeBuffer;
     FMarkers: TObjectList;// list of TFDMarker
     FMainTool: TCodeTool;
+    FTestBufferAdded: string;
+    FTestBufferAddedPos: integer;
     function GetMarkers(Index: integer): TFDMarker;
   protected
     procedure SetUp; override;
@@ -142,6 +154,11 @@ type
     procedure ParseSimpleMarkers(aCode: TCodeBuffer);
     function FindMarker(const aName: string; Kind: char): TFDMarker;
     procedure CheckReferenceMarkers;
+    procedure OnBufferChanged(Sender: TSourceLog; SrcLogEntry: TSourceLogEntry);
+    function NodeAsPath(Tool: TFindDeclarationTool; Node: TCodeTreeNode): string;
+    procedure CheckDeclarationPath(const MarkerName, aPath, ExpectedPath: string;
+      Flags: TFindSmartFlags = []; ExpectedDesc: TCodeTreeNodeDesc = ctnNone;
+      ExpectedGenParams: integer = -1);
     procedure FindDeclarations(Filename: string; ExpandFile: boolean = true);
     procedure FindDeclarations(aCode: TCodeBuffer);
     procedure TestFiles(Directory: string; ADefaultFileMask: String = '');
@@ -160,6 +177,7 @@ type
     procedure TestFindDeclaration_Proc_BaseTypes;
     procedure TestFindDeclaration_ProcNested;
     procedure TestFindDeclaration_ExceptOnDotted;
+    procedure TestFindDeclaration_DereferencedProperty;
 
     // function Result variable
     procedure TestFindDeclaration_ResultType;
@@ -222,6 +240,12 @@ type
     procedure TestFindDeclaration_GenericsDelphi_PublicProcType;
     procedure TestFindDeclaration_GenericsDelphi_MultiGenParams;
     procedure TestFindDeclaration_GenericsDelphi_MethodConstraints;
+
+    // FindDeclarationPathAt
+    procedure TestFindDeclarationPathAt_Basic;
+    procedure TestFindDeclarationPathAt_Generics;
+    procedure TestFindDeclarationPathAt_UnitPrefix;
+    procedure TestFindDeclarationPathAt_Flags;
 
     // ampersands
     procedure TestFindDeclaration_Ampersand;
@@ -437,7 +461,39 @@ begin
   inherited ClearNodeCaches;
 end;
 
-procedure TCustomTestFindDeclaration.FindDeclarations(aCode: TCodeBuffer);
+procedure TCustomTestFindDeclaration.OnBufferChanged(Sender: TSourceLog;
+  SrcLogEntry: TSourceLogEntry);
+var
+  s: String;
+begin
+  if SrcLogEntry = nil then begin
+    writeln('NO LOG');
+    exit;
+  end;
+
+  case SrcLogEntry.Operation of
+    sleoInsert:
+      begin
+        FTestBufferAddedPos := SrcLogEntry.Position;
+        s := Trim(SrcLogEntry.Txt);
+        if (Length(s) >= 3) and
+           (StrLIComp(pchar(s), pchar('var'), 3) = 0) and
+           ( (Length(s) = 3) or (s[4] in [#9..#32]) )
+        then
+          Delete(s,1,4);
+        s := Trim(s);
+        if FTestBufferAdded <> '' then
+          s := ' ' + s;
+        FTestBufferAdded := FTestBufferAdded + s;
+      end;
+    sleoDelete: ;
+    sleoMove: ;
+  end;
+
+end;
+
+function TCustomTestFindDeclaration.NodeAsPath(Tool: TFindDeclarationTool;
+  Node: TCodeTreeNode): string;
 
   procedure PrependPath(Prefix: string; var Path: string);
   begin
@@ -445,48 +501,100 @@ procedure TCustomTestFindDeclaration.FindDeclarations(aCode: TCodeBuffer);
     Path:=Prefix+Path;
   end;
 
-  function NodeAsPath(Tool: TFindDeclarationTool; Node: TCodeTreeNode): string;
-  var
-    aName: String;
-  begin
-    Result:='';
-    while Node<>nil do begin
-      case Node.Desc of
-      ctnTypeDefinition,ctnVarDefinition,ctnConstDefinition,ctnGenericParameter:
-        PrependPath(GetIdentifier(@Tool.Src[Node.StartPos]),Result);
-      ctnGenericType:
-        PrependPath(GetIdentifier(@Tool.Src[Node.FirstChild.StartPos]),Result);
-      ctnInterface,ctnUnit,ctnSrcName:
-        PrependPath(Tool.GetSourceName(false),Result);
-      ctnProcedure:
-        begin
-        aName:=Tool.ExtractProcName(Node,[]);
-        if aName='' then
-          aName:='$ano';
-        PrependPath(aName,Result);
-        end;
-      ctnProperty:
-        PrependPath(Tool.ExtractPropName(Node,false),Result);
-      ctnUseUnit:
-        PrependPath(Tool.ExtractUsedUnitName(Node),Result);
-      ctnUseUnitNamespace,ctnUseUnitClearName:
-        begin
-          PrependPath(GetIdentifier(@Tool.Src[Node.StartPos]),Result);
-          if Node.PriorBrother<>nil then begin
-            Node:=Node.PriorBrother;
-            continue;
-          end else begin
-            PrependPath(Tool.GetSourceName(false),Result); // prepend src name to distinguish uses from unit
-            break;
-          end;
-        end;
-      //else debugln(['NodeAsPath ',Node.DescAsString]);
+var
+  aName: String;
+begin
+  Result:='';
+  while Node<>nil do begin
+    case Node.Desc of
+    ctnTypeDefinition,ctnVarDefinition,ctnConstDefinition,ctnGenericParameter:
+      PrependPath(GetIdentifier(@Tool.Src[Node.StartPos]),Result);
+    ctnGenericType:
+      PrependPath(GetIdentifier(@Tool.Src[Node.FirstChild.StartPos]),Result);
+    ctnInterface,ctnUnit,ctnSrcName:
+      PrependPath(Tool.GetSourceName(false),Result);
+    ctnProcedure:
+      begin
+      aName:=Tool.ExtractProcName(Node,[]);
+      if aName='' then
+        aName:='$ano';
+      PrependPath(aName,Result);
       end;
-      Node:=Node.Parent;
+    ctnProperty:
+      PrependPath(Tool.ExtractPropName(Node,false),Result);
+    ctnUseUnit:
+      PrependPath(Tool.ExtractUsedUnitName(Node),Result);
+    ctnUseUnitNamespace,ctnUseUnitClearName:
+      begin
+        PrependPath(GetIdentifier(@Tool.Src[Node.StartPos]),Result);
+        if Node.PriorBrother<>nil then begin
+          Node:=Node.PriorBrother;
+          continue;
+        end else begin
+          PrependPath(Tool.GetSourceName(false),Result); // prepend src name to distinguish uses from unit
+          break;
+        end;
+      end;
+    //else debugln(['NodeAsPath ',Node.DescAsString]);
     end;
-    //debugln(['NodeAsPath ',Result]);
+    Node:=Node.Parent;
   end;
+  //debugln(['NodeAsPath ',Result]);
+end;
 
+procedure TCustomTestFindDeclaration.CheckDeclarationPath(const MarkerName,
+  aPath, ExpectedPath: string; Flags: TFindSmartFlags;
+  ExpectedDesc: TCodeTreeNodeDesc; ExpectedGenParams: integer);
+// Test TFindDeclarationTool.FindDeclarationPathAt.
+// The search starts at the node of the marker {#MarkerName}.
+// An empty ExpectedPath means: expect CleanFindContext.
+// ExpectedDesc<>ctnNone additionally checks the node type, needed where
+// NodeAsPath is ambiguous, e.g. for enum values.
+// ExpectedGenParams>=0 additionally checks the number of generic parameters,
+// needed because NodeAsPath does not show them.
+// Note: call ParseSimpleMarkers before.
+var
+  Marker: TFDMarker;
+  StartNode: TCodeTreeNode;
+  Context: TFindContext;
+  FoundPath: String;
+  i: integer;
+begin
+  Marker:=FindMarker(MarkerName,'#');
+  if Marker=nil then begin
+    WriteSource(1,MainTool);
+    Fail('Marker {'+MarkDecl+MarkerName+'} missing');
+  end;
+  StartNode:=MainTool.BuildSubTreeAndFindDeepestNodeAtPos(Marker.CleanPos,true);
+  Context:=MainTool.FindDeclarationPathAt(StartNode,aPath,Flags);
+  if Context.Node=nil then
+    FoundPath:=''
+  else
+    FoundPath:=NodeAsPath(Context.Tool,Context.Node);
+  if LowerCase(FoundPath)<>LowerCase(ExpectedPath) then begin
+    WriteSource(Marker.CleanPos,MainTool);
+    Fail('FindDeclarationPathAt at '+MainTool.CleanPosToStr(Marker.CleanPos,true)
+      +' Path="'+aPath+'" expected "'+ExpectedPath+'", but found "'+FoundPath+'"');
+  end;
+  if (ExpectedDesc<>ctnNone) and (Context.Node<>nil)
+  and (Context.Node.Desc<>ExpectedDesc) then begin
+    WriteSource(Marker.CleanPos,MainTool);
+    Fail('FindDeclarationPathAt at '+MainTool.CleanPosToStr(Marker.CleanPos,true)
+      +' Path="'+aPath+'" expected node '+NodeDescriptionAsString(ExpectedDesc)
+      +', but found '+Context.Node.DescAsString);
+  end;
+  if (ExpectedGenParams>=0) and (Context.Node<>nil) then begin
+    i:=Context.Tool.GetNodeGenericParamCount(Context.Node);
+    if i<>ExpectedGenParams then begin
+      WriteSource(Marker.CleanPos,MainTool);
+      Fail('FindDeclarationPathAt at '+MainTool.CleanPosToStr(Marker.CleanPos,true)
+        +' Path="'+aPath+'" expected '+IntToStr(ExpectedGenParams)
+        +' generic parameters, but found '+IntToStr(i));
+    end;
+  end;
+end;
+
+procedure TCustomTestFindDeclaration.FindDeclarations(aCode: TCodeBuffer);
 var
   CommentP: Integer;
   p, aTop: Integer;
@@ -511,9 +619,54 @@ var
   ListOfPCodeXYPosition: TFPList;
   Cache: TFindIdentifierReferenceCache;
   SearchFlags: TFindRefsFlags;
+
+  function TestCompleteCode: String;
+  var
+    NewCode: TCodeBuffer;
+    NewX, NewY, NewTL, NewBlock, NewBL, i, i2: integer;
+    CurSrc: String;
+  begin
+    Result := '';
+    FTestBufferAdded := '';
+    FTestBufferAddedPos := -1;
+    CurSrc := CursorPos.Code.Source;
+    CursorPos.Code.AddChangeHook(@OnBufferChanged);
+    CodeToolBoss.CompleteCode(CursorPos.Code, CursorPos.X, CursorPos.Y,
+      1, NewCode, NewX, NewY, NewTL, NewBlock, NewBL, False);
+    CursorPos.Code.RemoveChangeHook(@OnBufferChanged);
+    Result := FTestBufferAdded;
+    i := pos(':', Result);
+    if i > 0 then begin
+      delete(Result, 1,i);
+      Result := trim(Result);
+    end;
+    if (Result<>'') and (Result[Length(Result)] = ';') then
+      Delete(Result, Length(Result), 1);
+
+    if (Result <> '') and (Result[1] = ',') and (FTestBufferAddedPos > 0) then begin
+      // inserted into existing declaration for the same type
+      Result := '';
+      i := PosEx(':', NewCode.Source, FTestBufferAddedPos);
+      i2 := PosEx('{', NewCode.Source, FTestBufferAddedPos);
+      while (i2 > 0) and (i2 < i) do begin
+        i := PosEx(':', NewCode.Source, i2);
+        i2 := PosEx('{', NewCode.Source, FTestBufferAddedPos);
+      end;
+
+      if i > 0 then begin
+        i2 := PosEx(';', NewCode.Source, i);
+        if i2 > 0 then
+          Result := trim(copy(NewCode.Source, i+1, i2-i-1));
+      end;
+    end;
+
+    CursorPos.Code.Source := CurSrc;
+  end;
+
 begin
   FMainCode:=aCode;
   DoParseModule(MainCode,FMainTool);
+
   DoCheckNode := pos('{%skipnodechecks}', FMainTool.Src) < 1;
   if DoCheckNode then CheckNodeTree('StartA: '+FMainTool.Scanner.MainFilename, FMainTool, Self);
   Src:=MainTool.Src;
@@ -788,7 +941,7 @@ begin
               end;
             end;
           end
-        end else if Marker='guesstype' then begin
+        end else if (Marker='guesstype') or (Marker='anytype') then begin
           ExpectedType:=copy(Src,PathPos,CommentP-1-PathPos);
           {$IFDEF VerboseFindDeclarationTests}
           debugln(['TTestFindDeclaration.FindDeclarations "',Marker,'" at ',MainTool.CleanPosToStr(NameStartPos-1),' ExpectedType=',ExpectedType]);
@@ -819,6 +972,25 @@ begin
             end;
           finally
             FreeListOfPFindContext(ListOfPFindContext);
+          end;
+          if (TestLoop = 2) and (Marker='anytype') then begin
+            MainTool.CleanPosToCaret(IdentifierStartPos,CursorPos);
+            NewType := TestCompleteCode;
+            if LowerCase(ExpectedType)<>LowerCase(NewType) then begin
+              WriteSource(IdentifierStartPos,MainTool);
+              AssertEquals('VarTypeOfIdentifier (Loop: '+IntToStr(TestLoop)+') wrong at '+MainTool.CleanPosToStr(IdentifierStartPos,true),LowerCase(ExpectedType),LowerCase(NewType));
+            end;
+          end;
+        end else if (Marker='vartype') then begin
+          // only in the last loop, as source is reset after each run
+          if TestLoop = 2 then begin
+            ExpectedType:=copy(Src,PathPos,CommentP-1-PathPos);
+            MainTool.CleanPosToCaret(IdentifierStartPos,CursorPos);
+            NewType := TestCompleteCode;
+            if LowerCase(ExpectedType)<>LowerCase(NewType) then begin
+              WriteSource(IdentifierStartPos,MainTool);
+              AssertEquals('VarTypeOfIdentifier (Loop: '+IntToStr(TestLoop)+') wrong at '+MainTool.CleanPosToStr(IdentifierStartPos,true),LowerCase(ExpectedType),LowerCase(NewType));
+            end;
           end;
 
         end else if Marker='findrefs' then begin
@@ -1273,6 +1445,27 @@ begin
   'end;',
   'end.',
   '']);
+  FindDeclarations(Code);
+end;
+
+procedure TTestFindDeclaration.TestFindDeclaration_DereferencedProperty;
+begin
+  StartProgram;
+  Add([
+    '{$ModeSwitch AUTODEREF+}',
+    'type',
+    '  TRec = record',
+    '    one: Boolean;',
+    '  end;',
+    '  PRec = ^TRec;',
+    '  TTest = class',
+    '    function GetMyRec(const aIndex: Integer): PRec;',
+    '    property MyRec[const aIndex: Integer]: PRec read GetMyRec;',
+    '  end;',
+    'var t: TTest;',
+    'begin',
+    '  p := t.MyRec[1].one{declaration:trec.one};',
+    'end.']);
   FindDeclarations(Code);
 end;
 
@@ -2256,6 +2449,253 @@ begin
   FindDeclarations(Code);
 end;
 
+procedure TTestFindDeclaration.TestFindDeclarationPathAt_Basic;
+begin
+  StartProgram;
+  Add([
+  'type',
+  '  TColor = (clRed, clGreen);',
+  '  TWing = record',
+  '    Size: word;',
+  '  end;',
+  '  TBird = class',
+  '  public',
+  '    type',
+  '      TFeather = record',
+  '        Len: word;',
+  '      end;',
+  '    var',
+  '    Wing: TWing;',
+  '    Color: TColor;',
+  '    procedure Fly;',
+  '  end;',
+  'procedure TBird.Fly;',
+  'begin',
+  'end;',
+  'var b: TBird;',
+  'begin',
+  '  b.Fly;{#start}',
+  'end.',
+  '']);
+  ParseSimpleMarkers(Code);
+
+  // single identifier
+  CheckDeclarationPath('start','TBird','TBird');
+  CheckDeclarationPath('start','b','b');
+  // dotted
+  CheckDeclarationPath('start','TBird.Fly','TBird.Fly');
+  CheckDeclarationPath('start','TBird.Wing','TBird.Wing');
+  // the type of a member is resolved between the parts
+  CheckDeclarationPath('start','TBird.Wing.Size','TWing.Size');
+  // nested type
+  CheckDeclarationPath('start','TBird.TFeather.Len','TBird.TFeather.Len');
+  // enum value: NodeAsPath gives the enum type, so check the node type too
+  CheckDeclarationPath('start','TColor.clRed','TColor',[],ctnEnumIdentifier);
+
+  // not found
+  CheckDeclarationPath('start','DoesNotExist','');
+  CheckDeclarationPath('start','TBird.DoesNotExist','');
+  CheckDeclarationPath('start','TBird.Wing.DoesNotExist','');
+  // invalid paths
+  CheckDeclarationPath('start','','');
+  CheckDeclarationPath('start','TBird.','');
+  CheckDeclarationPath('start','.TBird','');
+  CheckDeclarationPath('start','TBird<>','');
+  CheckDeclarationPath('start','TBird<T','');
+end;
+
+procedure TTestFindDeclaration.TestFindDeclarationPathAt_Generics;
+begin
+  StartProgram;
+  Add([
+  '{$mode delphi}',
+  'type',
+  '  TFoo = class',
+  '    A: word;',
+  '  end;',
+  '  TFoo<T> = class',
+  '    B: word;',
+  '  end;',
+  '  TFoo<T,U> = class',
+  '    C: word;',
+  '  end;',
+  '  TBar = class',
+  '    D: word;',
+  '  end;',
+  '  TCat = class',
+  '    procedure DoIt; overload;',
+  '    procedure DoIt<T>; overload;',
+  '    procedure DoIt<T,U>; overload;',
+  '  end;',
+  'begin',
+  '  {#start}',
+  'end.',
+  '']);
+  ParseSimpleMarkers(Code);
+
+  // mode delphi: without '<>' the type without generic parameters is found,
+  // although the generic TFoo are declared later
+  CheckDeclarationPath('start','TFoo','TFoo',[],ctnTypeDefinition);
+  CheckDeclarationPath('start','TFoo.A','TFoo.A');
+  // only the number of generic parameters is relevant, not their types
+  CheckDeclarationPath('start','TFoo<T>','TFoo',[],ctnGenericType,1);
+  CheckDeclarationPath('start','TFoo<T,U>','TFoo',[],ctnGenericType,2);
+  // the members tell the three TFoo apart
+  CheckDeclarationPath('start','TFoo<T>.B','TFoo.B');
+  CheckDeclarationPath('start','TFoo<T,U>.C','TFoo.C');
+  // the parameter types are irrelevant, nested '<>' are counted correctly
+  CheckDeclarationPath('start','TFoo<word>.B','TFoo.B');
+  CheckDeclarationPath('start','TFoo<TBar<a,b>,c>.C','TFoo.C');
+  // wrong number of parameters
+  CheckDeclarationPath('start','TFoo<T>.A','');
+  CheckDeclarationPath('start','TFoo<T,U>.B','');
+  CheckDeclarationPath('start','TFoo<T,U,V>','');
+  // a type without generic parameters
+  CheckDeclarationPath('start','TBar.D','TBar.D');
+  CheckDeclarationPath('start','TBar<T>','');
+
+  // generic methods
+  // Note: NodeAsPath uses ExtractProcName, which writes '<>' for any number of
+  //       comma separated generic parameters, so check the number separately.
+  CheckDeclarationPath('start','TCat.DoIt','TCat.DoIt',[],ctnProcedure,0);
+  CheckDeclarationPath('start','TCat.DoIt<T>','TCat.DoIt<>',[],ctnProcedure,1);
+  CheckDeclarationPath('start','TCat.DoIt<T,U>','TCat.DoIt<>',[],ctnProcedure,2);
+  CheckDeclarationPath('start','TCat.DoIt<T,U,V>','');
+end;
+
+procedure TTestFindDeclaration.TestFindDeclarationPathAt_UnitPrefix;
+var
+  Unit2, Unit3, NSUnit, NSUnit2: TCodeBuffer;
+begin
+  Unit2:=CodeToolBoss.CreateFile('unit2.pp');
+  Unit3:=CodeToolBoss.CreateFile('unit3.pp');
+  NSUnit:=CodeToolBoss.CreateFile('red.green.pp');
+  NSUnit2:=CodeToolBoss.CreateFile('red.green.blue.pp');
+  try
+    Unit2.Source:=LinesToStr([
+      'unit unit2;',
+      '{$mode objfpc}{$H+}',
+      'interface',
+      'type',
+      '  TBird = class',
+      '    procedure Fly;',
+      '  end;',
+      'implementation',
+      'procedure TBird.Fly;',
+      'begin',
+      'end;',
+      'end.']);
+    Unit3.Source:=LinesToStr([
+      'unit unit3;',
+      '{$mode objfpc}{$H+}',
+      'interface',
+      'type',
+      '  TFish = class',
+      '  end;',
+      'implementation',
+      'end.']);
+    NSUnit.Source:=LinesToStr([
+      'unit Red.Green;',
+      'interface',
+      'var Two: word;',
+      'implementation',
+      'end.']);
+    NSUnit2.Source:=LinesToStr([
+      'unit Red.Green.Blue;',
+      'interface',
+      'var Three: word;',
+      'implementation',
+      'end.']);
+
+    Add([
+    'unit test1;',
+    '{$mode objfpc}{$H+}',
+    'interface',
+    'uses unit2, Red.Green, Red.Green.Blue;',
+    'type',
+    '  TIntfType = word;{#intf}',
+    'implementation',
+    'uses unit3;',
+    'type',
+    '  TImplType = word;',
+    'procedure Run;',
+    'begin',
+    '  {#impl}',
+    'end;',
+    'procedure Shadow;',
+    'var unit2: word;',
+    'begin',
+    '  {#shadow}',
+    'end;',
+    'end.',
+    '']);
+    ParseSimpleMarkers(Code);
+
+    // a used unit as prefix
+    CheckDeclarationPath('impl','unit2.TBird','unit2.TBird');
+    CheckDeclarationPath('impl','unit2.TBird.Fly','unit2.TBird.Fly');
+    // a unit name alone returns the unit node, fsfSearchSourceName the src name
+    // Note: NodeAsPath prepends the source name for both the ctnSrcName and
+    //       its parent ctnUnit, hence the doubled name in the second case
+    CheckDeclarationPath('impl','unit2','unit2',[],ctnUnit);
+    CheckDeclarationPath('impl','unit2','unit2.unit2',[fsfSearchSourceName],
+                         ctnSrcName);
+    // longest match wins: 'Red.Green.Blue' is a unit, not 'Red.Green' + 'Blue'
+    CheckDeclarationPath('impl','Red.Green.Two','red.green.Two');
+    CheckDeclarationPath('impl','Red.Green.Blue.Three','red.green.blue.Three');
+    // the own source name as prefix
+    CheckDeclarationPath('impl','test1.TIntfType','test1.TIntfType');
+    // without prefix the implementation section is reachable
+    // Note: NodeAsPath prepends the source name only for the interface
+    CheckDeclarationPath('impl','TImplType','TImplType');
+    // unknown unit
+    CheckDeclarationPath('impl','unit4.TBird','');
+
+    // the implementation uses section is only visible in the implementation
+    CheckDeclarationPath('impl','unit3.TFish','unit3.TFish');
+    CheckDeclarationPath('intf','unit3.TFish','');
+    CheckDeclarationPath('intf','unit2.TBird','unit2.TBird');
+
+    // a local variable hides the used unit
+    CheckDeclarationPath('shadow','unit2','Shadow.unit2');
+    CheckDeclarationPath('shadow','unit2.TBird','');
+  finally
+    Unit2.IsDeleted:=true;
+    Unit3.IsDeleted:=true;
+    NSUnit.IsDeleted:=true;
+    NSUnit2.IsDeleted:=true;
+  end;
+end;
+
+procedure TTestFindDeclaration.TestFindDeclarationPathAt_Flags;
+begin
+  StartProgram;
+  Add([
+  'type',
+  '  TBase = class',
+  '  public',
+  '    FSpeed: word;',
+  '    property Speed: word read FSpeed;',
+  '  end;',
+  '  TAnimal = class(TBase)',
+  '  public',
+  '    property Speed;',
+  '  end;',
+  'begin',
+  '  {#start}',
+  'end.',
+  '']);
+  ParseSimpleMarkers(Code);
+
+  // by default the type-less property of TAnimal is returned
+  CheckDeclarationPath('start','TAnimal.Speed','TAnimal.Speed');
+  // fsfSkipPropertyWithoutType returns the ancestor property with the type
+  CheckDeclarationPath('start','TAnimal.Speed','TBase.Speed',
+                       [fsfSkipPropertyWithoutType]);
+  CheckDeclarationPath('start','TAnimal.Speed','TBase.Speed',
+                       [fsfFindMainDeclaration,fsfSkipPropertyWithoutType]);
+end;
+
 procedure TTestFindDeclaration.TestFindDeclaration_Ampersand;
 begin
   StartUnit;
@@ -2525,19 +2965,19 @@ begin
   IncDef:=CodeToolBoss.AddIncludePath('TestFindDeclaration_IncludeSearch_FileWithPath',Dir,IncDir);
   try
     IncPath:=CodeToolBoss.GetIncludePathForDirectory(Dir,true);
-    AssertEquals('include path',';'+IncDir,IncPath);
+    AssertEqualsFileName('include path',';'+IncDir,IncPath);
 
     // test searching an include file with path relative to module directory
     IncFile:=SetDirSeparators('inc/sub/IncFileWithPath.inc');
     Found:=CodeToolBoss.DirectoryCachePool.FindIncludeFileInCompletePath(Dir,IncFile);
     ExpFile:=Dir+IncFile;
-    AssertEquals('20260123150229 include file with path relative to folder',ExpFile,Found);
+    AssertEqualsFileName('20260123150229 include file with path relative to folder',ExpFile,Found);
 
     // test searching an include file with path relative to include path
     IncFile:=SetDirSeparators('sub/IncFileWithPath.inc');
     Found:=CodeToolBoss.DirectoryCachePool.FindIncludeFileInCompletePath(Dir,IncFile);
     ExpFile:=IncDir+IncFile;
-    AssertEquals('20260123150232 include file with path relative to include path',ExpFile,Found);
+    AssertEqualsFileName('20260123150232 include file with path relative to include path',ExpFile,Found);
   finally
     CodeToolBoss.DefineTree.RemoveDefineTemplate(IncDef);
   end;
