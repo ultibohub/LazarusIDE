@@ -1309,9 +1309,19 @@ resourcestring
   dlgMaxCntr = 'Maximum counter';
   dlgEdBSubDir = 'Sub directory';
   dlgEnvOtherFiles = 'Other Files';
-  dlgMaxRecentFiles = 'Max recent files';
-  dlgMaxRecentProjs = 'Max recent project files';
+  dlgRecent = 'Recent';
+  dlgMaxRecentCount = 'Max count of recent items';
+  dlgRecentFilesCaption = 'Files';
+  dlgRecentProjectsCaption = 'Projects';
+  dlgRecentPackagesCaption = 'Packages';
   dlgMaxRecentHint = 'Value 0 means unlimited.';
+  dlgShowInOpenCoolbarButton = 'Show in "Open" drop-down toolbar button';
+  // Headers for the drop-down list of the "Open" toolbar button. Packages may
+  // display favorites in this list, so need to clarify that these are recent items.
+  dlgRecentProjectsHeader = 'Recent Projects:';
+  dlgRecentPackagesHeader = 'Recent Packages:';
+  dlgRecentFilesHeader = 'Recent Files:';
+
   dlgLazarusDir = 'Lazarus directory (default for all projects)';
   lisLazarusDirHint = 'Lazarus sources. This path is relative to primary config directory (%s).';
   dlgFpcExecutable = 'Compiler executable (e.g. %s)';
@@ -1938,6 +1948,7 @@ resourcestring
   dlgMarkupGroup = 'Highlight all occurrences of Word under Caret';
   dlgBracketMatchGroup = 'Matching bracket and quote pairs';
   dlgPasExtHighlightGroup = 'Extended Pascal Highlight Options';
+  dlgSqlExtHighlightGroup = 'Extended SQL Highlight Options';
   dlgPasParamTypes = 'Types and values in declarations and params';
   dlgPasKeywordsMatches = 'Matching Keywords';
   dlgPasKeywordsMarkup = 'Markup (on caret)';
@@ -1988,6 +1999,7 @@ resourcestring
   dlgIncludeIdentifiersContainingPrefix = 'Include identifiers containing prefix';
   lisAutomaticFeatures = 'Completion and Hints';
   lisPascalHighlightOpts = 'Pascal highlight';
+  lisSqlHighlightOpts = 'SQL highlight';
   lisAutoMarkup = 'Pairs/Matches and Structure';
   dlgUseIconsInCompletionBox = 'Icons in code completion box';
   dlgIncludeWordsToIdentCompl = 'Include words';
@@ -2767,6 +2779,7 @@ resourcestring
   lisFPCResources = 'FPC resources (.res)';
   lisDelphiCompatibleResources = 'Delphi compatible resources. Recommended.';
   lisStorePathDelimitersAndAs = 'Store path delimiters \ and / as';
+  lisSQLHighlighterDialect = 'Override dialect for SQL highlighter';
   lisDoNotChange = 'Do not change';
   lisChangeToUnix = 'Change to Unix /';
   lisChangeToWindows = 'Change to Windows \';
@@ -4565,6 +4578,8 @@ resourcestring
     +'po file. For this you must enable I18N for this package, provide a po '
     +'output directory and leave this option unchecked.';
   lisPkgMangUseUnit = 'Use unit';
+  lisPkgMangVirtualUnit = 'Virtual unit';
+  lisPkgMangVirtualUnitHint = 'Package has only a unit''s name. The unit itself is found elsewhere.';
   lisPckEditMinimumVersion = 'Minimum Version:';
   lisPckEditMaximumVersion = 'Maximum Version:';
   lisPckEditApplyChanges = 'Apply changes';
@@ -6225,6 +6240,31 @@ resourcestring
   lisWhenOpeningASymlinkFileOpenTheTargetFileTheSymlink = 'When opening a symlink file, open the '
     +'target file, the symlink file, or ask';
   lisWhenOpeningSymlink = 'When opening a Symlink';
+  dlgFoldSqlSelect = 'Select';
+  dlgFoldSqlSubSelect = 'Sub-Select';
+  dlgFoldSqlUpdateSelect = 'Update-Select';
+  dlgFoldSqlInsertSelect = 'Insert-Select';
+  dlgFoldSqlFrom = 'From';
+  dlgFoldSqlJoin = 'Join';
+  dlgFoldSqlJoinOn = 'Join-On';
+  dlgFoldSqlWhere = 'Where';
+  dlgFoldSqlGroup = 'Group';
+  dlgFoldSqlHaving = 'Having';
+  dlgFoldSqlOrder = 'Order';
+  dlgFoldSqlLimit = 'Limit';
+  dlgFoldSqlInto = 'Into';
+  dlgFoldSqlSet = 'Set';
+  dlgFoldSqlValues = 'Values';
+  dlgFoldSqlCreateTable = 'Create Table';
+  dlgFoldSqlAlterTable = 'Alter Table';
+  dlgFoldSqlDropTable = 'Drop Table';
+  dlgFoldSqlCreateDb = 'Create Database';
+  dlgFoldSqlDropDb = 'Drop Database';
+  dlgFoldSqlCreateProcedure = 'Create Procedure';
+  dlgFoldSqlBegin = 'Begin';
+  dlgFoldSqlUpdate = 'Update';
+  dlgFoldSqlInsert = 'Insert';
+  dlgFoldSqlDelete = 'Delete';
 
 implementation
 

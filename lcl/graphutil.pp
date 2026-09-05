@@ -75,7 +75,7 @@ procedure DrawArrow(Canvas:TCanvas;Direction:TScrollDirection; Location: TPoint;
 procedure DrawArrow(Canvas:TCanvas;p1,p2: TPoint; ArrowType: TArrowType=atSolid);
 procedure DrawArrow(Canvas:TCanvas;p1,p2: TPoint; ArrowLen: longint; ArrowAngleRad: float=NiceArrowAngle; ArrowType: TArrowType=atSolid);
 
-procedure FloodFill(Canvas: TCanvas; X, Y: Integer; lColor: TColor; FillStyle: TFillStyle);
+procedure FloodFill(Canvas: TCanvas; X, Y: Integer; lColor: TColor; FillStyle: TFillStyle); deprecated 'Use Canvas.FloodFill';  // will be removed in v5.99
 procedure ScaleImg(AImage: TCustomBitmap; AWidth, AHeight: Integer);
 
 // delphi compatibility
@@ -104,6 +104,34 @@ uses
   fpimage, fpcanvas, IntfGraphics, LazCanvas;
 
 //TODO: Check code on endianess
+
+function Max3(a, b, c: Double): Double; inline;
+begin
+  Result := a;
+  if b > Result then Result := b;
+  if c > Result then Result := c;
+end;
+
+function Min3(a, b, c: Double): Double; inline;
+begin
+  Result := a;
+  if b < Result then Result := b;
+  if c < Result then Result := c;
+end;
+
+function Max3(a, b, c: Integer): Integer; inline;
+begin
+  Result := a;
+  if b > Result then Result := b;
+  if c > Result then Result := c;
+end;
+
+function Min3(a, b, c: Integer): Integer; inline;
+begin
+  Result := a;
+  if b < Result then Result := b;
+  if c < Result then Result := c;
+end;
 
 procedure ExtractRGB(RGB: TColorRef; var R, G, B: Byte); inline;
 begin
@@ -143,8 +171,8 @@ end;
 procedure RGBtoHLS(const R, G, B: Byte; out H, L, S: Byte);
 var aDelta, aMin, aMax: Byte;
 begin
-  aMin := Math.min(Math.min(R, G), B);
-  aMax := Math.max(Math.max(R, G), B);
+  aMin := Min3(R, G, B);
+  aMax := Max3(R, G, B);
   aDelta := aMax - aMin;
   if aDelta > 0 then
     begin
@@ -155,7 +183,10 @@ begin
                else if G >= B
                       then H := round(42.5*(G - B)/aDelta)
                       else H := round(255 + 42.5*(G - B)/aDelta);
-    end;
+    end else
+      // Hue is undefined in this case (achromatic color), setting it to 0 to
+      // have consistent values (like in other libraries).
+      H := 0;
   L := (aMax + aMin) div 2;
   if (L = 0) or (aDelta = 0)
     then S := 0
@@ -363,33 +394,36 @@ begin //FloodFill
   if (lHt < 1) or (lWid < 1) then exit;
   getmem(lQra,lQSz*sizeof(longint)); //very wasteful -
   getmem(lMaskRA,lHt*lWid*sizeof(byte));
-  for lPos := 1 to (lHt*lWid) do
-      lMaskRA^[lPos] := lDefaultVal; //assume all voxels are non targets
-  lPos := 0;
-  // MG: it is very slow to access the whole (!) canvas with pixels
-  for lY := 0 to (lHt-1) do
-      for lX := 0 to (lWid-1) do begin
-          lPos := lPos + 1;
-          if Canvas.Pixels[lX,lY] = lColor then
-             lMaskRA^[lPos] := lTargetColorVal;
-      end;
-  lQHead := 2;
-  lQTail := 1;
-  lQra^[lQTail] := ((Y * lWid)+X+1); //NOTE: both X and Y start from 0 not 1
-  lMaskRA^[lQra^[lQTail]] := kFill;
-  RetirePixel;
-  while lQHead <> lQTail do
-        RetirePixel;
-  lBrushColor := Canvas.Brush.Color;
-  lPos := 0;
-  for lY := 0 to (lHt-1) do
-      for lX := 0 to (lWid-1) do begin
-          lPos := lPos + 1;
-          if lMaskRA^[lPos] = kFill then
-             Canvas.Pixels[lX,lY] := lBrushColor;
-      end;
-  freemem(lMaskRA);
-  freemem(lQra);
+  try
+    for lPos := 1 to (lHt*lWid) do
+        lMaskRA^[lPos] := lDefaultVal; //assume all voxels are non targets
+    lPos := 0;
+    // MG: it is very slow to access the whole (!) canvas with pixels
+    for lY := 0 to (lHt-1) do
+        for lX := 0 to (lWid-1) do begin
+            lPos := lPos + 1;
+            if Canvas.Pixels[lX,lY] = lColor then
+               lMaskRA^[lPos] := lTargetColorVal;
+        end;
+    lQHead := 2;
+    lQTail := 1;
+    lQra^[lQTail] := ((Y * lWid)+X+1); //NOTE: both X and Y start from 0 not 1
+    lMaskRA^[lQra^[lQTail]] := kFill;
+    RetirePixel;
+    while lQHead <> lQTail do
+          RetirePixel;
+    lBrushColor := Canvas.Brush.Color;
+    lPos := 0;
+    for lY := 0 to (lHt-1) do
+        for lX := 0 to (lWid-1) do begin
+            lPos := lPos + 1;
+            if lMaskRA^[lPos] = kFill then
+               Canvas.Pixels[lX,lY] := lBrushColor;
+        end;
+  finally
+    freemem(lMaskRA);
+    freemem(lQra);
+  end;
 end;
 
 procedure ScaleImg(AImage: TCustomBitmap; AWidth, AHeight: Integer);
@@ -401,9 +435,8 @@ begin
     exit;
 
   srcImg := AImage.CreateIntfImage;
-  destImg := AImage.CreateIntfImage;
+  destImg := TLazIntfImage.CreateCompatible(srcImg, AWidth, AHeight);
   try
-    destImg.SetSize(AWidth, AHeight);
     destCanvas := TLazCanvas.Create(destImg);
     try
       if (AWidth > srcImg.Width) and (AHeight > srcImg.Height) then
@@ -487,13 +520,16 @@ var
   dr, dg, db: integer;
 
  function GetColor(pos, total: integer): TColor;
+ var
+   factor: Double;
 
-   function GetComponent(c1, dc: integer): integer;
+   function GetComponent(c1, dc: integer): integer; inline;
    begin
-     Result := Round(dc / sqr(total) * sqr(pos) + c1);
+     Result := Round(factor * dc + c1);
    end;
 
  begin
+   factor := sqr(pos / total);
    Result :=
      GetComponent(r1, dr) or
      (GetComponent(g1, dg) shl 8) or
@@ -501,6 +537,8 @@ var
  end;
 
 begin
+  if ARect.Top = ARect.Bottom then
+    exit;
   ExtractRGB(ColorToRGB(TopColor), r1, g1, b1);
   ExtractRGB(ColorToRGB(BottomColor), r2, g2, b2);
   dr := r2 - r1;
@@ -571,15 +609,16 @@ var
   x, y: Integer;
   TempColor: TFPColor;
   Gray: Word;
-  sum: Single;
+  sum, invSum: Single;
 begin
   // Normalize filter factors to avoid word overflow.
   sum := RedFilter + GreenFilter + BlueFilter;
   if sum = 0.0 then
     exit;
-  RedFilter := RedFilter / sum;
-  GreenFilter := GreenFilter / sum;
-  BlueFilter := BlueFilter / sum;
+  invSum := 1.0 / sum;
+  RedFilter := RedFilter * invSum;
+  GreenFilter := GreenFilter * invSum;
+  BlueFilter := BlueFilter * invSum;
 
   IntfImg := ABitmap.CreateIntfImage;
   try
@@ -609,6 +648,7 @@ var
   Direction, Cur: Integer;
   PenPos, Dummy: TPoint;
 begin
+  if R < 2 then R := 2;
   dec(R);
   // get the current pos
   MoveToEx(ADC, 0, 0, @PenPos);
@@ -686,19 +726,20 @@ begin
   Result := RGBTriple.rgbtBlue shl 16 + RGBTriple.rgbtGreen shl 8 + RGBTriple.rgbtRed;
 end;
 
-
 { Assumes R, G, B to be in range 0..255. Calculates H, S, V in range 0..1
   From: http://axonflux.com/handy-rgb-to-hsl-and-rgb-to-hsv-color-model-c }
 procedure RGBToHSV(R, G, B: Integer; out H, S, V: Double);
+const
+  inv255 = double(1.0 / 255);
 var
   rr, gg, bb: Double;
   cmax, cmin, delta: Double;
 begin
-  rr := R / 255;
-  gg := G / 255;
-  bb := B / 255;
-  cmax := MaxValue([rr, gg, bb]);
-  cmin := MinValue([rr, gg, bb]);
+  rr := inv255 * R;   // = R / 255
+  gg := inv255 * G;
+  bb := inv255 * B;
+  cmax := Max3(rr, gg, bb);
+  cmin := Min3(rr, gg, bb);
   delta := cmax - cmin;
   if delta = 0 then
   begin
@@ -710,8 +751,8 @@ begin
       H := (gg - bb) / delta + IfThen(gg < bb, 6, 0)
     else if cmax = gg then
       H := (bb - rr) / delta + 2
-    else if (cmax = bb) then
-      H := (rr -gg) / delta + 4;
+    else  // cmax = bb here
+      H := (rr - gg) / delta + 4;
     H := H / 6;
     S := delta / cmax;
   end;
@@ -742,7 +783,11 @@ var
   end;
 
 begin
-  i := floor(H * 6);
+  H := EnsureRange(H, 0.0, 1.0);
+  S := EnsureRange(S, 0.0, 1.0);
+  V := EnsureRange(V, 0.0, 1.0);
+
+  i := trunc(H * 6);
   f := H * 6 - i;
   p := V * (1 - S);
   q := V * (1 - f*S);
@@ -754,7 +799,6 @@ begin
     3: MakeRGB(p, q, V);
     4: MakeRGB(t, p, V);
     5: MakeRGB(V, p, q);
-    else MakeRGB(0, 0, 0);
   end;
 end;
 
@@ -769,12 +813,13 @@ end;
 
 procedure RGBToHSVRange(R, G, B: integer; out H, S, V: integer);
 var
-  Delta, Min, H1, S1: double;
+  Delta, Min: Integer;
+  H1, S1: double;
 begin
-  Min := MinIntValue([R, G, B]);
-  V := MaxIntValue([R, G, B]);
+  Min := Min3(R, G, B);
+  V := Max3(R, G, B);
   Delta := V - Min;
-  if V =  0.0 then S1 := 0 else S1 := Delta / V;
+  if V = 0 then S1 := 0 else S1 := Delta / V;
   if S1  = 0.0 then
     H1 := 0
   else
@@ -805,62 +850,39 @@ function HSVtoRGBTriple(H, S, V: integer): TRGBTriple;
 const
   divisor: integer = 255*60;
 var
-  f, hTemp, p, q, t, VS: integer;
+  f, p, q, t, VS: integer;
 begin
-  if H > 360 then H := H - 360;
+  H := H mod 360;
   if H < 0 then H := H + 360;
   if s = 0 then
     Result := RGBtoRGBTriple(V, V, V)
   else
   begin
-    if H = 360 then hTemp := 0 else hTemp := H;
-    f := hTemp mod 60;
-    hTemp := hTemp div 60;
+    f := H mod 60;
     VS := V*S;
     p := V - VS div 255;
     q := V - (VS*f) div divisor;
     t := V - (VS*(60 - f)) div divisor;
-    case hTemp of
+    case H div 60 of
       0: Result := RGBtoRGBTriple(V, t, p);
       1: Result := RGBtoRGBTriple(q, V, p);
       2: Result := RGBtoRGBTriple(p, V, t);
       3: Result := RGBtoRGBTriple(p, q, V);
       4: Result := RGBtoRGBTriple(t, p, V);
       5: Result := RGBtoRGBTriple(V, p, q);
-    else Result := RGBtoRGBTriple(0,0,0)
     end;
   end;
 end;
 
 function HSVtoRGBQuad(H, S, V: integer): TRGBQuad;
-const
-  divisor: integer = 255*60;
 var
-  f, hTemp, p, q, t, VS: integer;
+  rgbt: TRGBTriple;
 begin
-  if H > 360 then H := H - 360;
-  if H < 0 then H := H + 360;
-  if s = 0 then
-    Result := RGBtoRGBQuad(V, V, V)
-  else
-  begin
-    if H = 360 then hTemp := 0 else hTemp := H;
-    f := hTemp mod 60;
-    hTemp := hTemp div 60;
-    VS := V*S;
-    p := V - VS div 255;
-    q := V - (VS*f) div divisor;
-    t := V - (VS*(60 - f)) div divisor;
-    case hTemp of
-      0: Result := RGBtoRGBQuad(V, t, p);
-      1: Result := RGBtoRGBQuad(q, V, p);
-      2: Result := RGBtoRGBQuad(p, V, t);
-      3: Result := RGBtoRGBQuad(p, q, V);
-      4: Result := RGBtoRGBQuad(t, p, V);
-      5: Result := RGBtoRGBQuad(V, p, q);
-    else Result := RGBtoRGBQuad(0,0,0)
-    end;
-  end;
+  rgbt := HSVToRGBTriple(H, S, V);
+  Result.rgbRed := rgbt.rgbtRed;
+  Result.rgbGreen := rgbt.rgbtGreen;
+  result.rgbBlue := rgbt.rgbtBlue;
+  Result.rgbReserved := 0;
 end;
 
 function HSVRangeToColor(H, S, V: integer): TColor;
@@ -903,7 +925,7 @@ var
   begin
     R := Rect(0, 0, AMaxWidth, 9999);
     DrawText(bmp.Canvas.Handle, P, ALength, R, DT_CALCRECT);
-    Result := R.Right >= AMaxWidth;
+    Result := R.Right > AMaxWidth;
   end;
 
   procedure AddLineToList(ALineStart, ALineEnd: PChar);
@@ -911,14 +933,21 @@ var
     len: Integer;
     sLine: String = '';
   begin
-    len := ALineEnd - ALineStart; // - 1;
-    SetLength(sLine, len);
-    Move(ALineStart^, sLine[1], len);
-    ALines.Add(sLine);
+    len := ALineEnd - ALineStart;
+    if len > 0 then
+    begin
+      SetLength(sLine, len);
+      Move(ALineStart^, sLine[1], len);
+      while (sLine <> '') and (sLine[Length(sLine)] in [' ', #9]) do
+        SetLength(sLine, Length(sLine)-1);  // Trim trailing white-space
+      ALines.Add(sLine);
+    end else
+      // This case happens for empty line after line-break.
+      ALines.Add('');
   end;
 
 var
-  P, PTextEnd, PLineStart, PWordStart: PChar;
+  P, PTextEnd, PLineStart, PWordStart, PWordEnd: PChar;
 begin
   Assert(ALines <> nil);
 
@@ -937,18 +966,14 @@ begin
     PWordStart := P;               // points to start of current word
     while P < PTextEnd do
     begin
-      if P^ in ['-'] then
+      if P^ in [' ', #9, '-'] then
       begin
-        if TextIsTooWide(PLineStart, P - PLineStart + 1) then
-        begin
-          AddLineToList(PLineStart, PWordStart);
-          PLineStart := PWordStart;
-        end;
-        PWordStart := P + 1;
-      end else
-      if P^ in [' ', #9] then
-      begin
-        if TextIsTooWide(PLineStart, P - PLineStart) then
+        // PWordEnd points to last character of word
+        if P = '-' then
+          PWordEnd := P
+        else
+          PWordEnd := P - 1;
+        if TextIsTooWide(PLineStart, PWordEnd - PLineStart + 1) then
         begin
           AddLineToList(PLineStart, PWordStart);
           PLineStart := PWordStart; // Next line begins at position of previous word
@@ -975,7 +1000,7 @@ begin
       AddLineToList(PLineStart, PWordStart);
       PLineStart := PWordStart;
     end;
-    AddLineToList(PLineStart, P + 1);
+    AddLineToList(PLineStart, P);
   finally
     bmp.Free;
   end;
@@ -1084,6 +1109,12 @@ var
    {$ENDIF}
   end;
 
+  function RotatePoint(APoint: TPoint; SinAngle, CosAngle: Double): TPoint;
+  begin
+    Result.X := Round( cosAngle * APoint.X + sinAngle * APoint.Y);
+    Result.Y := Round(-sinAngle * APoint.X + cosAngle * APoint.Y);
+  end;
+
   procedure GetRotatedBoundingRect(var ALineRects: TRectArray; ARotAngle: Double;
     ALeftAlign, AVertAlign: Integer; IsRTL: Boolean;
     var ABoundingRect: TRect; ATextOrigins: TPointArray
@@ -1094,7 +1125,9 @@ var
     cornerPts: Array[0..4] of TPoint;
     cp: TPoint;
     i, j: Integer;
+    sinAngle, cosAngle: Double;
   begin
+    SinCos(ARotAngle, sinAngle, cosAngle);
     totalHeight := ALineRects[High(ALineRects)].Bottom;
     R := Rect(MaxInt, MaxInt, -MaxInt, -MaxInt);
     for i := 0 to High(ALineRects) do
@@ -1109,11 +1142,10 @@ var
         DT_VCENTER: OffsetRect(ALineRects[i], 0, -totalHeight div 2);
         DT_BOTTOM: OffsetRect(ALineRects[i], 0, -totalHeight);
       end;
-      ATextOrigins[i] := RotatePoint(Point(ALineRects[i].Left, ALineRects[i].Top - deltaY), ARotAngle);
-//      ATextOrigins[i] := RotatePoint(Point(0, ALineRects[i].Top), ARotAngle);
-      cornerPts[0] := RotatePoint(ALineRects[i].TopLeft, ARotAngle);
-      cornerPts[1] := RotatePoint(Point(ALineRects[i].Right, ALineRects[i].Top), ARotAngle);
-      cornerPts[2] := RotatePoint(ALineRects[i].BottomRight, ARotAngle);
+      ATextOrigins[i] := RotatePoint(Point(ALineRects[i].Left, ALineRects[i].Top - deltaY), sinAngle, cosAngle);
+      cornerPts[0] := RotatePoint(ALineRects[i].TopLeft, sinAngle, cosAngle);
+      cornerPts[1] := RotatePoint(Point(ALineRects[i].Right, ALineRects[i].Top), sinAngle, cosAngle);
+      cornerPts[2] := RotatePoint(ALineRects[i].BottomRight, sinAngle, cosAngle);
       cornerPts[3] := cornerPts[0] + (cornerPts[2] - cornerPts[1]);
       cornerPts[4] := cornerPts[0];
 

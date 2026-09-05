@@ -1388,6 +1388,9 @@ var
   AForm: TCustomForm;
   AFocusedWidget: PGtkWidget;
   AFocusedLCL: TGtk3Widget;
+  AEventWidget: PGtkWidget;
+  ATargetWidget: TGtk3Widget;
+  AMsgActivate: TLMActivate;
 begin
   Result := gtk_false;
   if (Data = nil) or (TGtk3Widget(Data).LCLObject = nil) then
@@ -1475,6 +1478,42 @@ begin
     end;
   GDK_BUTTON_PRESS:
     begin
+      // issue #42545
+      if Gtk3WidgetSet.IsWayland and (wtWindow in TGtk3Widget(Data).WidgetType) and
+        not (wtHintWindow in TGtk3Widget(Data).WidgetType) and
+        (TGtk3Widget(Data).LCLObject is TCustomForm) and
+        Gtk3IsGtkWindow(TGtk3Widget(Data).Widget) and
+        (PGtkWindow(TGtk3Widget(Data).Widget)^.get_window_type = GTK_WINDOW_POPUP) and
+        PGtkWindow(TGtk3Widget(Data).Widget)^.get_accept_focus and
+        (Gtk3WidgetSet.MsgActivationLevel = 0) then
+      begin
+        AEventWidget := gtk_get_event_widget(event);
+        AForm := TCustomForm(TGtk3Widget(Data).LCLObject);
+        if Assigned(AEventWidget) and
+          (AEventWidget^.get_toplevel <> TGtk3Widget(Data).Widget) and
+          not (fsModal in AForm.FormState) and
+          AForm.Active and AForm.HandleAllocated then
+        begin
+          ATargetWidget := TGtk3Widget(HwndFromGtkWidget(AEventWidget^.get_toplevel));
+          Gtk3WidgetSet.MsgActivationLevel := Gtk3WidgetSet.MsgActivationLevel + 1;
+          try
+            AForm.Perform(CM_DEACTIVATE, 0, 0);
+            if AForm.HandleAllocated and AForm.Active then
+            begin
+              FillChar(AMsgActivate{%H-}, SizeOf(AMsgActivate), 0);
+              AMsgActivate.Msg := LM_ACTIVATE;
+              AMsgActivate.Active := WA_INACTIVE;
+              if Assigned(ATargetWidget) and Assigned(ATargetWidget.LCLObject) then
+                AMsgActivate.ActiveWindow := HWND(ATargetWidget.LCLObject.Handle);
+              TGtk3Widget(Data).DeliverMessage(AMsgActivate);
+            end;
+          finally
+            Gtk3WidgetSet.MsgActivationLevel := Gtk3WidgetSet.MsgActivationLevel - 1;
+          end;
+          exit(gtk_true);
+        end;
+      end;
+
       // set focus before gtk does that, so we have same behaviour as other ws
       if TGtk3Widget(Data).GetFocusableByMouse and
         not TGtk3Widget(Data).LCLObject.Focused and
@@ -2336,7 +2375,8 @@ begin
   begin
     if Sender^.get_toplevel^.is_toplevel then
     begin
-      if not PGtkWindow(Sender^.get_toplevel)^.is_active then
+      if not PGtkWindow(Sender^.get_toplevel)^.is_active and
+        Sender^.get_mapped and Sender^.get_toplevel^.get_mapped then
         Exit;
       if PGtkWindow(Sender^.get_toplevel)^.get_focus = Sender then
         Exit;
@@ -2779,6 +2819,13 @@ begin
     Gtk3WidgetSet.FGtk3KeyStates[VK_MENU] := False;
     Gtk3WidgetSet.FGtk3KeyStates[VK_LMENU] := False;
     Gtk3WidgetSet.FGtk3KeyStates[VK_RMENU] := False;
+  end;
+  if not (ACharCode in [VK_LWIN, VK_RWIN]) and
+     not (GDK_SUPER_MASK in AEvent.state) and not (GDK_MOD4_MASK in AEvent.state) and
+     not (GDK_META_MASK in AEvent.state) and not (GDK_HYPER_MASK in AEvent.state) then
+  begin
+    Gtk3WidgetSet.FGtk3KeyStates[VK_LWIN] := False;
+    Gtk3WidgetSet.FGtk3KeyStates[VK_RWIN] := False;
   end;
 
   if (KeyValue >= GDK_KEY_exclam) and (KeyValue <= GDK_KEY_parenleft) and
@@ -10226,6 +10273,10 @@ begin
     g_list_free(AChildren);
   end;
 
+  //issue #42555
+  g_signal_handlers_disconnect_matched(PGObject(OldWidget), [G_SIGNAL_MATCH_DATA], 0, 0, nil, nil, Self);
+  Gtk3ClearLCLWidgetData(PGObject(OldWidget));
+
   g_object_ref(PGObject(OldWidget));
   try
     if Assigned(AParent) then
@@ -15226,8 +15277,12 @@ var
         (OldShadowH <> TGtk3Window(ACtl).FResizeState.ShadowH)) and
        Assigned(ACtl.LCLObject) and (ACtl.LCLObject is TCustomForm) then
     begin
-      with TCustomForm(ACtl.LCLObject).Constraints do
-        if (MinWidth > 0) or (MaxWidth > 0) or (MinHeight > 0) or (MaxHeight > 0) then
+      with TCustomForm(ACtl.LCLObject) do
+        //issue #42460
+        if (Constraints.MinWidth > 0) or (Constraints.MaxWidth > 0) or
+           (Constraints.MinHeight > 0) or (Constraints.MaxHeight > 0) or
+           (Gtk3WidgetSet.IsWayland and
+            (BorderStyle in [bsDialog, bsSingle, bsToolWindow])) then
         begin
           {$IFDEF GTK3DEBUGSIZE}
           writeln(Format('[%d] WindowSizeAllocate %s shadow changed %dx%d -> %dx%d, refire constraint hints',

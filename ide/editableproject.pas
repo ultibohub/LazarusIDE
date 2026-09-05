@@ -18,7 +18,7 @@ uses
   // IdeConfig
   ProjectBuildMode, IdeXmlConfigProcs, RecentListProcs, IdeConfStrConsts,
   // IDEIntf
-  EditorSyntaxHighlighterDef, SrcEditorIntf, IDEOptEditorIntf,
+  EditorSyntaxHighlighterDef, SrcEditorIntf, IDEOptEditorIntf, SynHighlighterSQL,
   // IdeProject
   Project, ProjectDefs, IdeBookmark, RunParamOptions, IdeProjectStrConsts;
 
@@ -165,8 +165,6 @@ type
     property EditableProject: TEditableProject read GetEditableProject;
   end;
 
-  TArrayOfTEditableUnitInfo = array of TEditableUnitInfo;
-
   { TEditableProject }
 
   TEditableProject = class(TProject)
@@ -177,6 +175,8 @@ type
     FBookmarks: TProjectBookmarkList;
     FHistoryLists: THistoryLists;
     FJumpHistory: TProjectJumpHistory;
+    FOverrideGlobalSqlDialect: Boolean;
+    FSQLDialect: TSQLDialect;
     function GetAllEditorsInfo(Index: Integer): TUnitEditorInfo;
     function GetFirstUnitWithEditorIndex: TEditableUnitInfo;
     function GetMainUnitInfo: TEditableUnitInfo;
@@ -225,6 +225,9 @@ type
     property JumpHistory: TProjectJumpHistory read FJumpHistory write FJumpHistory;
     property MainUnitInfo: TEditableUnitInfo read GetMainUnitInfo;
     property Units[Index: integer]: TEditableUnitInfo read GetUnits;
+  published
+    property SQLDialect: TSQLDialect read FSQLDialect write FSQLDialect default sqlStandard;
+    property OverrideGlobalSqlDialect: Boolean read FOverrideGlobalSqlDialect write FOverrideGlobalSqlDialect default False;
   end;
 
 
@@ -851,6 +854,9 @@ begin
   FActiveWindowIndexAtStart := -1;
   FJumpHistory.Clear;
   FBookmarks.Clear;
+
+  FSQLDialect := sqlStandard;
+  FOverrideGlobalSqlDialect := False;
   inherited Clear;
 end;
 
