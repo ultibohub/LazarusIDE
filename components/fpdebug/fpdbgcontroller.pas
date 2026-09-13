@@ -272,7 +272,6 @@ type
     FMemModel: TFpDbgMemModel;
     FDefaultContext: TFpDbgLocationContext;
     FOnThreadCheckStepForIgnoredRoutine: TOnCheckExcludedRoutine;
-    FPreAttach: boolean;
     FStoredDefaultContext: TFpDbgLocationContext; // while function eval calling
     FOnLibraryLoadedEvent: TOnLibraryLoadedEvent;
     FOnLibraryUnloadedEvent: TOnLibraryUnloadedEvent;
@@ -1925,6 +1924,7 @@ begin
     FOnThreadBeforeProcessLoop(Self);
 
   repeat
+    FCurrentProcess.MaybeThreadsClearCallStack;
     ReleaseRefAndNil(FDefaultContext);
     DidContinue := True;
     if assigned(FCurrentProcess) and not assigned(FMainProcess) then begin
@@ -2117,6 +2117,7 @@ begin
 
   until AExit or (InterLockedExchangeAdd(FPauseRequest, 0) = 1);
   FCurrentProcess.ProcessBreakpointUpdates;
+  FCurrentProcess.ClearNeedThreadsClearCallStack;
 end;
 
 procedure TDbgController.SendEvents(out continue: boolean);

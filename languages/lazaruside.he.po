@@ -1091,6 +1091,10 @@ msgstr ""
 msgid "Choose code template file (*.dci)"
 msgstr "בחר קובץ תבנית לקוד (*.dci)"
 
+#: lazarusidestrconsts.dlgclass
+msgid "Class:"
+msgstr ""
+
 #: lazarusidestrconsts.dlgclosebuttonsnotebook
 msgid "Show close buttons in notebook"
 msgstr "הראה את כפתור הסגירה בפנקס"
@@ -1399,7 +1403,7 @@ msgid "IDE internal window"
 msgstr ""
 
 #: lazarusidestrconsts.dlgconsolemodeide
-msgid "Internal IDE consoles"
+msgid "Internal IDE console"
 msgstr ""
 
 #: lazarusidestrconsts.dlgconsolemodeos
@@ -3701,6 +3705,10 @@ msgstr "לשוניות פנקס:"
 msgid "Naming"
 msgstr "מתן שם"
 
+#: lazarusidestrconsts.dlgnewdebuggerbackend
+msgid "New debugger backend"
+msgstr ""
+
 #: lazarusidestrconsts.dlgnewdesktop
 msgid "New desktop ..."
 msgstr ""
@@ -4068,6 +4076,10 @@ msgstr "סמן קבוע"
 
 #: lazarusidestrconsts.dlgpersistentcursornoblink
 msgid "Caret in unfocused editor does not blink"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpleasechoosethedebuggerbackend
+msgid "Please choose the debugger backend to add."
 msgstr ""
 
 #: lazarusidestrconsts.dlgpoansiutf8
@@ -20305,6 +20317,38 @@ msgstr ""
 
 #: lazarusidestrconsts.optdispgutterusecurrentlinenumbercolor
 msgid "Use current line number color (gutter: number)"
+msgstr ""
+
+#: lazarusidestrconsts.optedcompletebackspacebehaviour
+msgid "Backspace behaviour"
+msgstr ""
+
+#: lazarusidestrconsts.optedcompletecancelifcaretatstart
+msgid "Cancel, if caret at start"
+msgstr ""
+
+#: lazarusidestrconsts.optedcompletecancelifcaretatstartsingl
+msgid "Cancel, if caret at start (single press, not on repeat key)"
+msgstr ""
+
+#: lazarusidestrconsts.optedcompletecancelifcompletionwasjust
+msgid "Cancel, if completion was just opened"
+msgstr ""
+
+#: lazarusidestrconsts.optedcompletecancelifcompletionwasjust2
+msgid "Cancel, if completion was just opened, and caret at start"
+msgstr ""
+
+#: lazarusidestrconsts.optedcompletecancelifjustopenedorcaret
+msgid "Cancel, if just opened, or caret at start (not on repeat key)"
+msgstr ""
+
+#: lazarusidestrconsts.optedcompletecancelifopenedbydot
+msgid "Cancel, if opened by dot"
+msgstr ""
+
+#: lazarusidestrconsts.optedcompleteonlydeletepreviouschar
+msgid "Only delete previous char"
 msgstr ""
 
 #: lazarusidestrconsts.podaddpackageunittousessection

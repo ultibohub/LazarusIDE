@@ -1333,6 +1333,11 @@ resourcestring
     +'translate the compiler messages to another language (i.e. not English). '
     +'For example: German: $(FPCSrcDir)/compiler/msg/errordu.msg.';
 
+  dlgNewDebuggerBackend = 'New debugger backend';
+  dlgPleaseChooseTheDebuggerBackend = 'Please choose the debugger backend to '
+    +'add.';
+  dlgClass = 'Class:';
+
   dlgDebugType = 'Debugger type and path';
   dlgTestPrjDir = 'Directory for building test projects';
 
@@ -2818,7 +2823,7 @@ resourcestring
   dlgRedirStdNotSupported = 'Current debugger does not support redirection.';
   dlgConsoleGroup = 'Console';
   dlgConsoleModeOs = 'OS console';
-  dlgConsoleModeIde = 'Internal IDE consoles';
+  dlgConsoleModeIde = 'Internal IDE console';
   dlgConsoleUseIdeDefault = '-- Use IDE default console --';
   dlgConsoleIdeWindow = 'IDE internal window';
   dlgConsoleUnknown = 'Unknown console "%s"';
@@ -6265,6 +6270,17 @@ resourcestring
   dlgFoldSqlUpdate = 'Update';
   dlgFoldSqlInsert = 'Insert';
   dlgFoldSqlDelete = 'Delete';
+  optEdCompleteBackspaceBehaviour = 'Backspace behaviour';
+  optEdCompleteOnlyDeletePreviousChar = 'Only delete previous char';
+  optEdCompleteCancelIfCompletionWasJust = 'Cancel, if completion was just opened';
+  optEdCompleteCancelIfCompletionWasJust2 = 'Cancel, if completion was just opened, and caret at '
+    +'start';
+  optEdCompleteCancelIfCaretAtStart = 'Cancel, if caret at start';
+  optEdCompleteCancelIfCaretAtStartSingl = 'Cancel, if caret at start (single press, not on '
+    +'repeat key)';
+  optEdCompleteCancelIfJustOpenedOrCaret = 'Cancel, if just opened, or caret at start (not on '
+    +'repeat key)';
+  optEdCompleteCancelIfOpenedByDot = 'Cancel, if opened by dot';
 
 implementation
 

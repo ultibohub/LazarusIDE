@@ -610,8 +610,6 @@ type
     procedure ThreadLogExpression;
     procedure ThreadLogCallStack;
   protected
-    procedure DoLogExpression(const AnExpression: String); override;
-    procedure DoLogCallStack(const Limit: Integer); override;
     procedure DoStateChange(const AOldState: TDBGState); override;
     procedure DoPropertiesChanged(AChanged: TDbgBpChangeIndicators); override;
     procedure DoChanged; override;
@@ -620,6 +618,8 @@ type
     property  Validity: TValidState write SetValid;
   public
     destructor Destroy; override;
+    procedure DoLogExpression(const AnExpression: String); override;
+    procedure DoLogCallStack(const Limit: Integer); override;
   end;
 
   { TFPBreakpoints }
@@ -4001,7 +4001,7 @@ begin
     exit;
 
   PasExpr := nil;
-  FExceptionStepper.FState := ExceptionState;
+  st :=  FExceptionStepper.FState;
   if AnAtException then
     FExceptionStepper.FState := esStoppedAtRaise;
   try
@@ -4251,8 +4251,6 @@ procedure TFpDebugDebugger.FDbgControllerHitBreakpointEvent(
 var
   ABreakPoint: TDBGBreakPoint;
   ALocationAddr: TDBGLocationRec;
-  Context: TFpDbgSymbolScope;
-  PasExpr: TFpPascalExpression;
   Opts: TFpInt3DebugBreakOptions;
   NeedInternalPause, IsDBrk: Boolean;
   b: Integer;
@@ -5435,15 +5433,10 @@ begin
     {$IF ( (defined(CPU386) or defined(CPUI386) or defined(CPUX86_64) or defined(CPUX64)) ) }
     Result := [dfEvalFunctionCalls, dfThreadSuspension];
       {$IFDEF linux}
-      Result := Result + [dfAttachToExecStarter];
+      Result := Result + [dfAttachToExecStarter, dfStdInOutCaptureDefault];
       {$ENDIF}
       {$IFDEF windows}
-      Result := Result + [dfConsoleWinPos];
-      (* Claimed on Windows only for now. The Linux side reaches the debuggee
-         through a pty rather than pipes and has not been exercised against
-         diomCaptureInternal, so widening this is a testing question rather than
-         a design one. *)
-      Result := Result + [dfStdInOutCapture];
+      Result := Result + [dfConsoleWinPos, dfStdInOutCapture];
       {$ENDIF}
       if DBG_PROCESS_HAS_REDIRECT then
         Result := Result + [dfStdInOutRedirect];

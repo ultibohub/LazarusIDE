@@ -281,6 +281,7 @@ type
     function WordIsGenericProcStart: boolean;
     function AllowAttributes: boolean; inline;
     function AllowAnonymousFunctions: boolean; inline;
+    function AllowStatementExpressions: boolean; inline;
   public
     CurSection: TCodeTreeNodeDesc;
 
@@ -1584,7 +1585,7 @@ begin
     until false;
   end;
   if (CloseBracket<>#0) then begin
-    if Src[CurPos.StartPos]<>CloseBracket then begin
+    if not AtomIsChar(CloseBracket) then begin // accepts also '.)' bracket
       if ExceptionOnError then
         SaveRaiseCharExpectedButAtomFound(20170421195435,CloseBracket)
       else
@@ -2060,10 +2061,27 @@ function TPascalParserTool.ReadConstant(ExceptionOnError, Extract: boolean;
     end;
   end;
 
+  function ReadIfExprPart: boolean;
+  // reads the condition, then-part or else-part of an if-expression,
+  // which can contain comparisons, e.g. a>b
+  begin
+    Result:=false;
+    repeat
+      if not ReadConstant(ExceptionOnError,Extract,Attr) then exit;
+      if (CurPos.StartPos>SrcLen)
+      or not WordIsBooleanOperator.DoItCaseInsensitive(Src,CurPos.StartPos,
+                                               CurPos.EndPos-CurPos.StartPos)
+      then
+        break;
+      if not Extract then ReadNextAtom else ExtractNextAtom(true,Attr);
+    until false;
+    Result:=true;
+  end;
+
 var
   BracketType: TCommonAtomFlag;
   p: PChar;
-  first: Boolean;
+  first, IsNotOperator: Boolean;
 begin
   Result:=false;
   repeat
@@ -2087,7 +2105,27 @@ begin
       if not Extract then ReadNextAtom else ExtractNextAtom(true,Attr);
     until false;
     // read operand
-    if CurPos.Flag in AllCommonAtomWords then begin
+    if UpAtomIs('IF') and AllowStatementExpressions then begin
+      // if-expression: if Cond then A else B
+      if not Extract then ReadNextAtom else ExtractNextAtom(true,Attr);
+      if not ReadIfExprPart then exit;
+      if not UpAtomIs('THEN') then begin
+        if ExceptionOnError then
+          SaveRaiseStringExpectedButAtomFound(20260910190000,'then')
+        else exit;
+      end;
+      if not Extract then ReadNextAtom else ExtractNextAtom(true,Attr);
+      if not ReadIfExprPart then exit;
+      if not UpAtomIs('ELSE') then begin
+        if ExceptionOnError then
+          SaveRaiseStringExpectedButAtomFound(20260910190001,'else')
+        else exit;
+      end;
+      if not Extract then ReadNextAtom else ExtractNextAtom(true,Attr);
+      if not ReadIfExprPart then exit;
+      // lowest precedence: the else-part has read all following operators
+      break;
+    end else if CurPos.Flag in AllCommonAtomWords then begin
       // word (identifier or keyword)
       if AtomIsKeyWord
       and (not IsKeyWordInConstAllowed.DoIdentifier(@Src[CurPos.StartPos])) then
@@ -2173,7 +2211,12 @@ begin
       break;
     end;
     // operator => read further
+    IsNotOperator:=UpAtomIs('NOT');
     if not Extract then ReadNextAtom else ExtractNextAtom(true,Attr);
+    if IsNotOperator and UpAtomIs('IN') then begin
+      // "not in"
+      if not Extract then ReadNextAtom else ExtractNextAtom(true,Attr);
+    end;
   until false;
   Result:=true;
 end;
@@ -2673,7 +2716,7 @@ begin
     if IsIdentStartChar[c] then
       Result:=KeyWordFuncList.DoItCaseInsensitive(Src,CurPos.StartPos,
                                                   CurPos.EndPos-CurPos.StartPos)
-    else if c='[' then begin
+    else if CurPos.Flag=cafEdgedBracketOpen then begin // also accepts '(.'
       if AllowAttributes then begin
         ReadAttribute;
         Result:=true;
@@ -5763,7 +5806,9 @@ begin
       ReadTilBracketClose(true);
     if (CurPos.Flag in AllCommonAtomWords)
     and (not IsKeyWordInConstAllowed.DoIdentifier(@Src[CurPos.StartPos]))
-    and AtomIsKeyWord then
+    and AtomIsKeyWord
+    and not (AllowStatementExpressions
+             and (UpAtomIs('IF') or UpAtomIs('THEN') or UpAtomIs('ELSE'))) then
       SaveRaiseStringExpectedButAtomFound(20170421195903,'constant');
     if (CurPos.Flag = cafWord) and
        (UpAtomIs('DEPRECATED') or UpAtomIs('PLATFORM')
@@ -6623,6 +6668,11 @@ function TPascalParserTool.AllowAnonymousFunctions: boolean;
 begin
   Result:=(cmsAnonymousFunctions in Scanner.CompilerModeSwitches)
     or (Scanner.PascalCompiler=pcPas2js);
+end;
+
+function TPascalParserTool.AllowStatementExpressions: boolean;
+begin
+  Result:=cmsStatementExpressions in Scanner.CompilerModeSwitches;
 end;
 
 procedure TPascalParserTool.ValidateToolDependencies;

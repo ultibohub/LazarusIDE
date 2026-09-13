@@ -8203,6 +8203,9 @@ begin
 
   if (TPascalCodeFoldBlockType(Index) in [cfbtIfThen, cfbtForDo, cfbtWhileDo, cfbtWithDo, cfbtIfElse]) then
     m := [];
+  if TPascalCodeFoldBlockType(Index) in [cfbtCaseElse] then
+    m := m - [fmMarkup];
+
   if TPascalCodeFoldBlockType(Index) in [cfbtSlashComment] then
     Result.Modes := [fmFold, fmHide] + m
   else
@@ -8264,8 +8267,10 @@ end;
 function TSynPasSyn.DoPrepareLines(AFirstLineIdx: IntIdx; AMinimumRequiredLineIdx: IntIdx;
   AMaxTime: integer): integer;
 begin
-  if AFirstLineIdx = CurrentRanges.UnsentValidationStartLine then
-    CurrentRanges.UpdateUnsentValidationStartLine(AFirstLineIdx - 1); // TODO: check if LastLineCodeFoldLevelFix changes
+  if (AFirstLineIdx > 0) and (AFirstLineIdx = CurrentRanges.UnsentValidationStartLine) then begin
+    AFirstLineIdx := AFirstLineIdx - 1;
+    CurrentRanges.UpdateUnsentValidationStartLine(AFirstLineIdx); // TODO: check if LastLineCodeFoldLevelFix changes
+  end;
   Result := inherited DoPrepareLines(AFirstLineIdx, AMinimumRequiredLineIdx, AMaxTime);
 end;
 

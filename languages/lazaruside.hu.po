@@ -1074,6 +1074,10 @@ msgstr "A form csomagokat igényelhet a működéshez. Az ilyen csomagok automat
 msgid "Choose code template file (*.dci)"
 msgstr "Kódsablon fájl választása (*.dci)"
 
+#: lazarusidestrconsts.dlgclass
+msgid "Class:"
+msgstr ""
+
 #: lazarusidestrconsts.dlgclosebuttonsnotebook
 msgid "Show close buttons in notebook"
 msgstr "Bezáró gomb megjelenítése a lapfüleken"
@@ -1360,7 +1364,7 @@ msgid "IDE internal window"
 msgstr ""
 
 #: lazarusidestrconsts.dlgconsolemodeide
-msgid "Internal IDE consoles"
+msgid "Internal IDE console"
 msgstr ""
 
 #: lazarusidestrconsts.dlgconsolemodeos
@@ -3570,6 +3574,10 @@ msgstr "Jegyzettömb fülek"
 msgid "Naming"
 msgstr "Elnevezések"
 
+#: lazarusidestrconsts.dlgnewdebuggerbackend
+msgid "New debugger backend"
+msgstr ""
+
 #: lazarusidestrconsts.dlgnewdesktop
 msgid "New desktop ..."
 msgstr "Új felület ..."
@@ -3922,6 +3930,10 @@ msgstr "Nem aktív szerkesztőben is látható a beszúrási jel"
 #: lazarusidestrconsts.dlgpersistentcursornoblink
 msgid "Caret in unfocused editor does not blink"
 msgstr "Nem aktív szerkesztőben nem villog a beszúrási jel"
+
+#: lazarusidestrconsts.dlgpleasechoosethedebuggerbackend
+msgid "Please choose the debugger backend to add."
+msgstr ""
 
 #: lazarusidestrconsts.dlgpoansiutf8
 msgid "ANSI codepage is UTF-8 (Windows 10 1903+)"
@@ -19509,6 +19521,38 @@ msgstr ""
 
 #: lazarusidestrconsts.optdispgutterusecurrentlinenumbercolor
 msgid "Use current line number color (gutter: number)"
+msgstr ""
+
+#: lazarusidestrconsts.optedcompletebackspacebehaviour
+msgid "Backspace behaviour"
+msgstr ""
+
+#: lazarusidestrconsts.optedcompletecancelifcaretatstart
+msgid "Cancel, if caret at start"
+msgstr ""
+
+#: lazarusidestrconsts.optedcompletecancelifcaretatstartsingl
+msgid "Cancel, if caret at start (single press, not on repeat key)"
+msgstr ""
+
+#: lazarusidestrconsts.optedcompletecancelifcompletionwasjust
+msgid "Cancel, if completion was just opened"
+msgstr ""
+
+#: lazarusidestrconsts.optedcompletecancelifcompletionwasjust2
+msgid "Cancel, if completion was just opened, and caret at start"
+msgstr ""
+
+#: lazarusidestrconsts.optedcompletecancelifjustopenedorcaret
+msgid "Cancel, if just opened, or caret at start (not on repeat key)"
+msgstr ""
+
+#: lazarusidestrconsts.optedcompletecancelifopenedbydot
+msgid "Cancel, if opened by dot"
+msgstr ""
+
+#: lazarusidestrconsts.optedcompleteonlydeletepreviouschar
+msgid "Only delete previous char"
 msgstr ""
 
 #: lazarusidestrconsts.podaddpackageunittousessection

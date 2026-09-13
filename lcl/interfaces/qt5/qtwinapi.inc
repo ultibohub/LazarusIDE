@@ -535,6 +535,8 @@ function TQtWidgetSet.CreateFontIndirectEx(const LogFont: TLogFont; const LongFo
 var
   QtFont: TQtFont;
   FamilyName: string;
+  AFontInfo: QFontInfoH;
+  AResolvedFamily: WideString;
 const
   QStyleStategy: array [DEFAULT_QUALITY..CLEARTYPE_NATURAL_QUALITY] of QFontStyleStrategy = (
  { DEFAULT_QUALITY           } QFontPreferDefault,
@@ -590,6 +592,11 @@ begin
 
     if LogFont.lfQuality <= High(QStyleStategy) then
       QtFont.setStyleStrategy(QStyleStategy[LogFont.lfQuality]);
+    AFontInfo := QFontInfo_Create(QtFont.FHandle);
+    QFontInfo_family(AFontInfo, @AResolvedFamily);
+    QFontInfo_Destroy(AFontInfo);
+    if (AResolvedFamily <> '') and (UTF16ToUTF8(AResolvedFamily) <> FamilyName) then
+      QFont_setFamily(QtFont.FHandle, @AResolvedFamily);
     Result := HFONT(QtFont);
   except
     Result := 0;
@@ -2178,11 +2185,25 @@ var
 
   procedure DoDrawCharByChar(const AClipped: Boolean);
   var
-    CurX, CharLen: Integer;
+    CurX, CharLen, ClusterBytes, ClusterDx, NextLen: Integer;
     CurCount: LongInt;
     CurDx: PInteger;
     CurStr: PChar;
     W: WideString;
+
+    function IsRegionalIndicator(P: PChar; Len: Integer): Boolean;
+    var
+      cp, cpLen: Integer;
+    begin
+      if Len <> 4 then
+        Result := False
+      else
+      begin
+        cp := UTF8CodepointToUnicode(P, cpLen);
+        Result := LazCpIsRegionalIndicator(cp);
+      end;
+    end;
+
   begin
     CurDx := Dx;
     CurStr := Str;
@@ -2191,16 +2212,28 @@ var
     while CurCount > 0 do
     begin
       CharLen := UTF8CodepointSize(CurStr);
-      W := {%H-}Copy(CurStr, 1, CharLen);
+      ClusterBytes := CharLen;
+      ClusterDx := CurDx^;
+      if IsRegionalIndicator(CurStr, CharLen) then
+        while ClusterBytes < CurCount do
+        begin
+          NextLen := UTF8CodepointSize(CurStr + ClusterBytes);
+          if not IsRegionalIndicator(CurStr + ClusterBytes, NextLen) then
+            Break;
+          inc(CurDx);
+          inc(ClusterDx, CurDx^);
+          inc(ClusterBytes, NextLen);
+        end;
+      W := {%H-}Copy(CurStr, 1, ClusterBytes);
       if AClipped then
         QtDC.drawText(CurX, Y, Rect^.Right - Rect^.Left, Rect^.Bottom - Rect^.Top,
           QtTextDontClip, @W)
       else
         QtDC.drawText(CurX, Y, @W);
-      inc(CurX, CurDx^);
+      inc(CurX, ClusterDx);
       inc(CurDx);
-      inc(CurStr, CharLen);
-      dec(CurCount, CharLen);
+      inc(CurStr, ClusterBytes);
+      dec(CurCount, ClusterBytes);
     end;
   end;
 

@@ -1057,6 +1057,10 @@ msgstr "ຟອມອາດຈະຕ້ອງການແພັກເກັດເ
 msgid "Choose code template file (*.dci)"
 msgstr "ເລືອກໄຟລ໌ແມ່ແບບໂຄ້ດ (*.dci)"
 
+#: lazarusidestrconsts.dlgclass
+msgid "Class:"
+msgstr ""
+
 #: lazarusidestrconsts.dlgclosebuttonsnotebook
 msgid "Show close buttons in notebook"
 msgstr "ສະແດງປຸ່ມປິດໃນ notebook"
@@ -1343,7 +1347,7 @@ msgid "IDE internal window"
 msgstr ""
 
 #: lazarusidestrconsts.dlgconsolemodeide
-msgid "Internal IDE consoles"
+msgid "Internal IDE console"
 msgstr ""
 
 #: lazarusidestrconsts.dlgconsolemodeos
@@ -3524,6 +3528,10 @@ msgstr "ແຖບສະໝຸດບັນທຶກ"
 msgid "Naming"
 msgstr "ການຕັ້ງຊື່"
 
+#: lazarusidestrconsts.dlgnewdebuggerbackend
+msgid "New debugger backend"
+msgstr ""
+
 #: lazarusidestrconsts.dlgnewdesktop
 msgid "New desktop ..."
 msgstr "ເດັສທັອບໃໝ່ ..."
@@ -3876,6 +3884,10 @@ msgstr "ເຄີເຊີເບິ່ງເຫັນໄດ້ໃນຕົວແ
 #: lazarusidestrconsts.dlgpersistentcursornoblink
 msgid "Caret in unfocused editor does not blink"
 msgstr "ເຄີເຊີໃນຕົວແກ້ໄຂທີ່ບໍ່ໄດ້ໂຟກັດບໍ່ກະພິບ"
+
+#: lazarusidestrconsts.dlgpleasechoosethedebuggerbackend
+msgid "Please choose the debugger backend to add."
+msgstr ""
 
 #: lazarusidestrconsts.dlgpoansiutf8
 msgid "ANSI codepage is UTF-8 (Windows 10 1903+)"
@@ -19308,6 +19320,38 @@ msgstr "ໃຊ້ສີແຖວປັດຈຸບັນ (gutter: ອື່ນ�
 #: lazarusidestrconsts.optdispgutterusecurrentlinenumbercolor
 msgid "Use current line number color (gutter: number)"
 msgstr "ໃຊ້ສີເລກແຖວປັດຈຸບັນ (gutter: ຕົວເລກ)"
+
+#: lazarusidestrconsts.optedcompletebackspacebehaviour
+msgid "Backspace behaviour"
+msgstr ""
+
+#: lazarusidestrconsts.optedcompletecancelifcaretatstart
+msgid "Cancel, if caret at start"
+msgstr ""
+
+#: lazarusidestrconsts.optedcompletecancelifcaretatstartsingl
+msgid "Cancel, if caret at start (single press, not on repeat key)"
+msgstr ""
+
+#: lazarusidestrconsts.optedcompletecancelifcompletionwasjust
+msgid "Cancel, if completion was just opened"
+msgstr ""
+
+#: lazarusidestrconsts.optedcompletecancelifcompletionwasjust2
+msgid "Cancel, if completion was just opened, and caret at start"
+msgstr ""
+
+#: lazarusidestrconsts.optedcompletecancelifjustopenedorcaret
+msgid "Cancel, if just opened, or caret at start (not on repeat key)"
+msgstr ""
+
+#: lazarusidestrconsts.optedcompletecancelifopenedbydot
+msgid "Cancel, if opened by dot"
+msgstr ""
+
+#: lazarusidestrconsts.optedcompleteonlydeletepreviouschar
+msgid "Only delete previous char"
+msgstr ""
 
 #: lazarusidestrconsts.podaddpackageunittousessection
 msgid "Add package unit to uses section"

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lazaruside\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2026-09-04 01:57+0300\n"
+"PO-Revision-Date: 2026-09-06 22:39+0300\n"
 "Last-Translator: Maxim Ganetsky <maxkill@mail.ru>\n"
 "Language-Team: \n"
 "Language: ru\n"
@@ -1058,6 +1058,10 @@ msgstr "Форма может требовать пакета для корре�
 msgid "Choose code template file (*.dci)"
 msgstr "Выберите файл шаблонов кода (*.dci)"
 
+#: lazarusidestrconsts.dlgclass
+msgid "Class:"
+msgstr "Класс:"
+
 #: lazarusidestrconsts.dlgclosebuttonsnotebook
 msgid "Show close buttons in notebook"
 msgstr "Показывать кнопки закрытия вкладок"
@@ -1342,8 +1346,8 @@ msgid "IDE internal window"
 msgstr "Внутреннее окно IDE"
 
 #: lazarusidestrconsts.dlgconsolemodeide
-msgid "Internal IDE consoles"
-msgstr "Внутренние консоли IDE"
+msgid "Internal IDE console"
+msgstr "Внутренняя консоль IDE"
 
 #: lazarusidestrconsts.dlgconsolemodeos
 msgid "OS console"
@@ -3513,6 +3517,10 @@ msgstr "Вкладки редакторов"
 msgid "Naming"
 msgstr "Именование"
 
+#: lazarusidestrconsts.dlgnewdebuggerbackend
+msgid "New debugger backend"
+msgstr "Новый механизм отладки"
+
 #: lazarusidestrconsts.dlgnewdesktop
 msgid "New desktop ..."
 msgstr "Новый рабочий стол ..."
@@ -3860,6 +3868,10 @@ msgstr "Показывать курсор в неактивном редакто
 #: lazarusidestrconsts.dlgpersistentcursornoblink
 msgid "Caret in unfocused editor does not blink"
 msgstr "Не мигать курсором в неактивном редакторе"
+
+#: lazarusidestrconsts.dlgpleasechoosethedebuggerbackend
+msgid "Please choose the debugger backend to add."
+msgstr "Выберите механизм отладки для добавления."
 
 #: lazarusidestrconsts.dlgpoansiutf8
 msgid "ANSI codepage is UTF-8 (Windows 10 1903+)"
@@ -13893,7 +13905,7 @@ msgstr "Создать"
 
 #: lazarusidestrconsts.lisnewclass
 msgid "New Class"
-msgstr "Новый Класс"
+msgstr "Новый класс"
 
 #: lazarusidestrconsts.lisnewconsoleapplication
 msgid "New console application"
@@ -19274,6 +19286,38 @@ msgstr "Использовать цвет текущей строки (боко�
 #: lazarusidestrconsts.optdispgutterusecurrentlinenumbercolor
 msgid "Use current line number color (gutter: number)"
 msgstr "Использовать цвет номера текущей строки (боковое поле: номер)"
+
+#: lazarusidestrconsts.optedcompletebackspacebehaviour
+msgid "Backspace behaviour"
+msgstr "Поведение при нажатии забоя"
+
+#: lazarusidestrconsts.optedcompletecancelifcaretatstart
+msgid "Cancel, if caret at start"
+msgstr "Отменить, если курсор в начале"
+
+#: lazarusidestrconsts.optedcompletecancelifcaretatstartsingl
+msgid "Cancel, if caret at start (single press, not on repeat key)"
+msgstr "Отменить, если курсор в начале (нажатие без удержания)"
+
+#: lazarusidestrconsts.optedcompletecancelifcompletionwasjust
+msgid "Cancel, if completion was just opened"
+msgstr "Отменить, если окно только что открыто"
+
+#: lazarusidestrconsts.optedcompletecancelifcompletionwasjust2
+msgid "Cancel, if completion was just opened, and caret at start"
+msgstr "Отменить, если окно только что открыто и курсор в начале"
+
+#: lazarusidestrconsts.optedcompletecancelifjustopenedorcaret
+msgid "Cancel, if just opened, or caret at start (not on repeat key)"
+msgstr "Отменить, если окно только что открыто либо курсор в начале (нажатие без удержания)"
+
+#: lazarusidestrconsts.optedcompletecancelifopenedbydot
+msgid "Cancel, if opened by dot"
+msgstr "Отменить, если окно открыто нажатием точки"
+
+#: lazarusidestrconsts.optedcompleteonlydeletepreviouschar
+msgid "Only delete previous char"
+msgstr "Только удалить предыдущий символ"
 
 #: lazarusidestrconsts.podaddpackageunittousessection
 msgid "Add package unit to uses section"
