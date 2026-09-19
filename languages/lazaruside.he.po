@@ -2676,6 +2676,16 @@ msgstr ""
 msgid "Hide tab in single page windows"
 msgstr "הסתר לשונית בחלונות חד-עמודיים"
 
+#: lazarusidestrconsts.dlghighlightbothsidesofcursorleft
+msgctxt "lazarusidestrconsts.dlghighlightbothsidesofcursorleft"
+msgid "On both sides (left first)"
+msgstr ""
+
+#: lazarusidestrconsts.dlghighlightbothsidesofcursorright
+msgctxt "lazarusidestrconsts.dlghighlightbothsidesofcursorright"
+msgid "On both sides (right first)"
+msgstr ""
+
 #: lazarusidestrconsts.dlghighlightcolor
 msgid "Highlight Color"
 msgstr "צבע ההדגשה"
@@ -2687,13 +2697,13 @@ msgstr "צכע הגופן המודגש"
 #: lazarusidestrconsts.dlghighlightleftofcursor
 #, fuzzy
 #| msgid "Left Of Cursor"
-msgid "Left Of Caret"
+msgid "Left of Caret"
 msgstr "שמאל הסמן"
 
 #: lazarusidestrconsts.dlghighlightrightofcursor
 #, fuzzy
 #| msgid "Right Of Cursor"
-msgid "Right Of Caret"
+msgid "Right of Caret"
 msgstr "ימין הסמן"
 
 #: lazarusidestrconsts.dlghintsparametersendernotused
@@ -5275,10 +5285,6 @@ msgstr "אפשרות: הצמד לקווים המנחים"
 msgid "Z-order"
 msgstr "סדר - יורד"
 
-#: lazarusidestrconsts.gldhighlightbothsidesofcursor
-msgid "On Both Sides"
-msgstr "בשני הצדדים"
-
 #: lazarusidestrconsts.initdlgdebugchangepath
 msgid "Change path"
 msgstr ""
@@ -5836,6 +5842,10 @@ msgstr "הוסף חבילה לפרוייקט"
 #: lazarusidestrconsts.lisaddparameterbrackets
 msgid "Add parameter brackets"
 msgstr "הוסף סוגריים של פרמטר"
+
+#: lazarusidestrconsts.lisaddpathtotrustedexe
+msgid "Add path to trusted executable"
+msgstr ""
 
 #: lazarusidestrconsts.lisaddthefollowingfiles
 msgid "Add the following files:"
@@ -7018,10 +7028,6 @@ msgstr ""
 #: lazarusidestrconsts.lischangeencoding
 msgid "Change Encoding"
 msgstr "שנה קידוד"
-
-#: lazarusidestrconsts.lischangefile
-msgid "Change file"
-msgstr "שנה קובץ"
 
 #: lazarusidestrconsts.lischangemethodvisibilityto
 #, object-pascal-format
@@ -9352,11 +9358,6 @@ msgstr "האם למחוק קובץ ישן s%s%s%?"
 
 #: lazarusidestrconsts.lisdeleteselectedmacro
 msgid "Delete selected macro?"
-msgstr ""
-
-#: lazarusidestrconsts.lisdeleteselectedtrustedcompilers
-msgctxt "lazarusidestrconsts.lisdeleteselectedtrustedcompilers"
-msgid "Delete selected"
 msgstr ""
 
 #: lazarusidestrconsts.lisdeletethisaddition
@@ -15381,6 +15382,10 @@ msgstr ""
 msgid "Pastel Colors"
 msgstr ""
 
+#: lazarusidestrconsts.lispathalreadyexists
+msgid "The path already exists."
+msgstr ""
+
 #: lazarusidestrconsts.lispatheditbrowse
 msgctxt "lazarusidestrconsts.lispatheditbrowse"
 msgid "Browse"
@@ -17234,9 +17239,9 @@ msgstr ""
 msgid "Reopen project"
 msgstr "פתח פרוייקט מחדש"
 
-#: lazarusidestrconsts.lisreopenwithanotherencoding
-msgid "Reopen with another encoding"
-msgstr "פתח מחדש בקידוד אחר"
+#: lazarusidestrconsts.lisreopenwithnewencoding
+msgid "Reopen with new encoding"
+msgstr ""
 
 #: lazarusidestrconsts.lisrepeat
 msgctxt "lazarusidestrconsts.lisrepeat"
@@ -17618,6 +17623,10 @@ msgstr ""
 #: lazarusidestrconsts.lissavespace
 msgid "Save "
 msgstr "שמור"
+
+#: lazarusidestrconsts.lissavewithnewencoding
+msgid "Save with new encoding"
+msgstr ""
 
 #: lazarusidestrconsts.lissavingfileasloosescharactersatlinecolumn
 #, object-pascal-format
@@ -19144,7 +19153,7 @@ msgid "Trust project compiler?"
 msgstr ""
 
 #: lazarusidestrconsts.listrustcompilerthistime
-msgid "Trust this time"
+msgid "Trust until project closes"
 msgstr ""
 
 #: lazarusidestrconsts.listrustedcommands

@@ -2598,6 +2598,16 @@ msgstr "Vůbec neukazovat IDE pokud běží program."
 msgid "Hide tab in single page windows"
 msgstr "Skrýt záložky v jednostránkových oknech"
 
+#: lazarusidestrconsts.dlghighlightbothsidesofcursorleft
+msgctxt "lazarusidestrconsts.dlghighlightbothsidesofcursorleft"
+msgid "On both sides (left first)"
+msgstr ""
+
+#: lazarusidestrconsts.dlghighlightbothsidesofcursorright
+msgctxt "lazarusidestrconsts.dlghighlightbothsidesofcursorright"
+msgid "On both sides (right first)"
+msgstr ""
+
 #: lazarusidestrconsts.dlghighlightcolor
 msgid "Highlight Color"
 msgstr "Barva zvýraznění"
@@ -2607,11 +2617,15 @@ msgid "Highlight Font Color"
 msgstr "Barva zvýraznění písma"
 
 #: lazarusidestrconsts.dlghighlightleftofcursor
-msgid "Left Of Caret"
+#, fuzzy
+#| msgid "Left Of Caret"
+msgid "Left of Caret"
 msgstr "Nalevo od kurzoru"
 
 #: lazarusidestrconsts.dlghighlightrightofcursor
-msgid "Right Of Caret"
+#, fuzzy
+#| msgid "Right Of Caret"
+msgid "Right of Caret"
 msgstr "Napravo of kurzoru"
 
 #: lazarusidestrconsts.dlghintsparametersendernotused
@@ -5112,10 +5126,6 @@ msgstr "Volba: Přitáhnout k vodícím čarám"
 msgid "Z-order"
 msgstr "Z-pořadí"
 
-#: lazarusidestrconsts.gldhighlightbothsidesofcursor
-msgid "On Both Sides"
-msgstr "Na obou stranách"
-
 #: lazarusidestrconsts.initdlgdebugchangepath
 msgid "Change path"
 msgstr ""
@@ -5651,6 +5661,10 @@ msgstr "Přidat balíček do projektu"
 #: lazarusidestrconsts.lisaddparameterbrackets
 msgid "Add parameter brackets"
 msgstr "Přidat závorky parametru"
+
+#: lazarusidestrconsts.lisaddpathtotrustedexe
+msgid "Add path to trusted executable"
+msgstr ""
 
 #: lazarusidestrconsts.lisaddthefollowingfiles
 msgid "Add the following files:"
@@ -6787,10 +6801,6 @@ msgstr "Změněna souřadnice %s od %s z \"%d\" na \"%d\" uvnitř %s."
 #: lazarusidestrconsts.lischangeencoding
 msgid "Change Encoding"
 msgstr "Změnit kódování"
-
-#: lazarusidestrconsts.lischangefile
-msgid "Change file"
-msgstr "Změnit soubor"
 
 #: lazarusidestrconsts.lischangemethodvisibilityto
 #, object-pascal-format
@@ -9065,12 +9075,6 @@ msgstr "Odstranit starý soubor \"%s\"?"
 #: lazarusidestrconsts.lisdeleteselectedmacro
 msgid "Delete selected macro?"
 msgstr "Smazat vybrané makro?"
-
-#: lazarusidestrconsts.lisdeleteselectedtrustedcompilers
-#, fuzzy
-msgctxt "lazarusidestrconsts.lisdeleteselectedtrustedcompilers"
-msgid "Delete selected"
-msgstr "Odstranit vybrané"
 
 #: lazarusidestrconsts.lisdeletethisaddition
 msgid "Delete this addition"
@@ -14870,6 +14874,10 @@ msgstr "Vložit ze schránky."
 msgid "Pastel Colors"
 msgstr "Pastelové barvy"
 
+#: lazarusidestrconsts.lispathalreadyexists
+msgid "The path already exists."
+msgstr ""
+
 #: lazarusidestrconsts.lispatheditbrowse
 msgctxt "lazarusidestrconsts.lispatheditbrowse"
 msgid "Browse"
@@ -16612,9 +16620,9 @@ msgstr ""
 msgid "Reopen project"
 msgstr "Znovuotevřít projekt"
 
-#: lazarusidestrconsts.lisreopenwithanotherencoding
-msgid "Reopen with another encoding"
-msgstr "Znovuotevřít s jiným kódováním"
+#: lazarusidestrconsts.lisreopenwithnewencoding
+msgid "Reopen with new encoding"
+msgstr ""
 
 #: lazarusidestrconsts.lisrepeat
 msgctxt "lazarusidestrconsts.lisrepeat"
@@ -16986,6 +16994,10 @@ msgstr "Uložit Zobrazené Zprávy do Souboru..."
 #: lazarusidestrconsts.lissavespace
 msgid "Save "
 msgstr "Uložit "
+
+#: lazarusidestrconsts.lissavewithnewencoding
+msgid "Save with new encoding"
+msgstr ""
 
 #: lazarusidestrconsts.lissavingfileasloosescharactersatlinecolumn
 #, object-pascal-format
@@ -18452,7 +18464,7 @@ msgid "Trust project compiler?"
 msgstr ""
 
 #: lazarusidestrconsts.listrustcompilerthistime
-msgid "Trust this time"
+msgid "Trust until project closes"
 msgstr ""
 
 #: lazarusidestrconsts.listrustedcommands

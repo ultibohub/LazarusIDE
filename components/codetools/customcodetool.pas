@@ -233,6 +233,7 @@ type
     // read blocks
     function ReadTilBracketClose(ExceptionOnNotFound: boolean): boolean;
     function ReadBackTilBracketOpen(ExceptionOnNotFound: boolean): boolean;
+    function ReadTilStatementExprEnd: boolean;
     procedure ReadTillCommentEnd;
     
     // read atoms
@@ -641,10 +642,6 @@ begin
   Result:=false;
   if (CurPos.StartPos<=SrcLen) and (CurPos.EndPos<=SrcLen+1)
   and (CurPos.StartPos>=1) then begin
-    if ((CurPos.Flag = cafEdgedBracketOpen) and ((AnAtom ='[') or (AnAtom ='(.'))) or
-    ((CurPos.Flag = cafEdgedBracketClose) and ((AnAtom =']') or (AnAtom ='.)')))
-    then
-      exit(true); // accepted alternative range specifiers
     AnAtomLen:=length(AnAtom);
     if AnAtomLen=CurPos.EndPos-CurPos.StartPos then begin
       for i:=1 to AnAtomLen do
@@ -662,10 +659,6 @@ begin
   Result:=false;
   AnAtomLen:=length(AnAtom);
   if AnAtomLen<>CurPos.EndPos-CurPos.StartPos then exit;
-  if ((CurPos.Flag = cafEdgedBracketOpen) and ((AnAtom ='[') or (AnAtom ='(.'))) or
-    ((CurPos.Flag = cafEdgedBracketClose) and ((AnAtom =']') or (AnAtom ='.)')))
-    then
-      exit(true); // accepted alternative range specifiers
   if (CurPos.EndPos<=SrcLen+1) and (CurPos.StartPos>=1) then begin
     p:=@Src[CurPos.StartPos];
     for i:=1 to AnAtomLen do begin
@@ -686,10 +679,6 @@ begin
   AnAtomLen:=length(AnAtom);
   if AnAtomLen<>AtomPos.EndPos-AtomPos.StartPos then exit;
   if (AtomPos.EndPos<=SrcLen+1) and (AtomPos.StartPos>=1) then begin
-    if ((AtomPos.Flag = cafEdgedBracketOpen) and ((AnAtom ='[') or (AnAtom ='(.'))) or
-    ((AtomPos.Flag = cafEdgedBracketClose) and ((AnAtom =']') or (AnAtom ='.)')))
-    then
-      exit(true); // accepted alternative range specifiers
     p:=@Src[AtomPos.StartPos];
     for i:=1 to AnAtomLen do begin
       if AnAtom[i]<>UpChars[p^] then exit;
@@ -801,10 +790,6 @@ end;
 
 function TCustomCodeTool.AtomIsChar(const c: char): boolean;
 begin
-  if (CurPos.Flag = cafEdgedBracketOpen) and (c ='[') or
-  (CurPos.Flag = cafEdgedBracketClose) and (c =']') then
-    exit(true); // accepted alternative range specifiers
-
   Result:=(CurPos.StartPos<=SrcLen)
       and (CurPos.EndPos-CurPos.StartPos=1)
       and (Src[CurPos.StartPos]=c);
@@ -1389,11 +1374,7 @@ begin
   '(':
     begin
       inc(CurPos.EndPos);
-      if Src[CurPos.EndPos]='.' then begin
-        inc(CurPos.EndPos);
-        CurPos.Flag:=cafEdgedBracketOpen;
-      end else
-        CurPos.Flag:=cafRoundBracketOpen;
+      CurPos.Flag:=cafRoundBracketOpen;
     end;
   ')':
     begin
@@ -1424,10 +1405,6 @@ begin
   '.':
     begin
       inc(CurPos.EndPos);
-      if (Src[CurPos.EndPos]=')') then begin
-        inc(CurPos.EndPos);
-        CurPos.Flag:=cafEdgedBracketClose;
-      end else
       if (Src[CurPos.EndPos]<>'.') then begin
         // '.'
         CurPos.Flag:=cafPoint;
@@ -1859,12 +1836,7 @@ begin
     ':': CurPos.Flag:=cafColon;
     ',': CurPos.Flag:=cafComma;
     '(': CurPos.Flag:=cafRoundBracketOpen;
-    ')':
-      if Src[CurPos.StartPos-1]='.' then begin // alternative range bracket  .)
-        CurPos.Flag:=cafEdgedBracketClose;
-        dec(CurPos.StartPos);
-      end else
-        CurPos.Flag:=cafRoundBracketClose;
+    ')': CurPos.Flag:=cafRoundBracketClose;
     '[': CurPos.Flag:=cafEdgedBracketOpen;
     ']': CurPos.Flag:=cafEdgedBracketClose;
 
@@ -1873,7 +1845,6 @@ begin
         if CurPos.StartPos>1 then begin
           c1:=Src[CurPos.StartPos-1];
           // test for double char operators :=, +=, -=, /=, *=, <>, <=, >=, **, ><
-          // and alternative range bracket  (.
           if ((c2='=') and (c1=':')) then
           begin
             dec(CurPos.StartPos);
@@ -1888,12 +1859,7 @@ begin
           then begin
             dec(CurPos.StartPos);
             CurPos.Flag:=cafOtherOperator;
-          end else
-          if (c1='(') and (c2='.') then begin  // accepted alternative range specifier
-            dec(CurPos.StartPos);
-            CurPos.Flag:=cafEdgedBracketOpen;
-          end else
-          begin
+          end else begin
             case c2 of
             '=': CurPos.Flag:=cafEqual;
             '.': CurPos.Flag:=cafPoint;
@@ -2045,7 +2011,7 @@ function TCustomCodeTool.ReadTilBracketClose(
 // reads code brackets (not comment brackets)
 // after call cursor is on the closing bracket
 var CloseBracket, AntiCloseBracket: TCommonAtomFlag;
-  Start: TAtomPosition;
+  Start, CaseAtom: TAtomPosition;
   Node: TCodeTreeNode;
   
   procedure RaiseBracketNotFound;
@@ -2080,6 +2046,16 @@ begin
   repeat
     ReadNextAtom;
     if (CurPos.Flag=CloseBracket) then break;
+    if (CurPos.Flag=cafWord) and (UpAtomIs('CASE') or UpAtomIs('TRY'))
+    and (Scanner<>nil)
+    and (cmsStatementExpressions in Scanner.CompilerModeSwitches) then begin
+      // skip case- or try-except-expression
+      CaseAtom:=CurPos;
+      if not ReadTilStatementExprEnd then
+        // not a case-expression, e.g. a variant record
+        MoveCursorToAtomPos(CaseAtom);
+      continue;
+    end;
     if (CurPos.StartPos>SrcLen)
     or (CurPos.Flag in [cafEnd,AntiCloseBracket])
     then begin
@@ -2103,6 +2079,32 @@ begin
     end;
   until false;
   Result:=true;
+end;
+
+function TCustomCodeTool.ReadTilStatementExprEnd: boolean;
+// cursor is on the CASE of a case-expression or the TRY of a
+// try-except-expression, moves the cursor to the END of the expression.
+// Returns false if there is no END, e.g. a variant record in brackets.
+var
+  Level: Integer;
+begin
+  Result:=false;
+  Level:=0;
+  repeat
+    ReadNextAtom;
+    if CurPos.StartPos>SrcLen then exit;
+    if CurPos.Flag in [cafRoundBracketOpen,cafEdgedBracketOpen] then begin
+      if not ReadTilBracketClose(false) then exit;
+    end else if CurPos.Flag in [cafRoundBracketClose,cafEdgedBracketClose] then
+      // e.g. variant record: (case b: byte of 0: (c: word))
+      exit
+    else if CurPos.Flag=cafEND then begin
+      if Level=0 then exit(true);
+      dec(Level);
+    end else if UpAtomIs('CASE') or UpAtomIs('BEGIN') or UpAtomIs('TRY')
+    or UpAtomIs('ASM') then
+      inc(Level);
+  until false;
 end;
 
 function TCustomCodeTool.ReadBackTilBracketOpen(

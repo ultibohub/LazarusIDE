@@ -172,7 +172,7 @@ uses
   IdeDebuggerWatchResult, InitialSetupDlgs, NewDialog,
   MakeResStrDlg, DialogProcs, FindReplaceDialog, FindInFilesDlg,
   CodeExplorer, BuildFileDlg, ProcedureList, ExtractProcDlg,
-  FindRenameIdentifier, AbstractsMethodsDlg, EmptyMethodsDlg, UnusedUnitsDlg,
+  FindRenameIdentExec, AbstractsMethodsDlg, EmptyMethodsDlg, UnusedUnitsDlg,
   UseUnitDlg, FindOverloadsDlg, EditorFileManager, CleanDirDlg, CodeContextForm,
   AboutFrm, CompatibilityRestrictions, RestrictionBrowser, ProjectWizardDlg,
   CodeExplOpts, EditorMacroListViewer, EditableProject,
@@ -9007,7 +9007,6 @@ begin
         DoOpenProjectFile(Project1.ProjectInfoFile,[ofRevert])
       else
         Project1.IgnoreProjectInfoFileOnDisk;
-      exit(mrOk);
     end;
 
     AIgnoreList := TFPList.Create;
@@ -9158,15 +9157,16 @@ begin
 
   if (GlobalMacroList <> nil) then begin
     CustomCaption := EnvironmentGuiOpts.Desktop.IDETitleBarCustomText;
-    if CustomCaption <> '' then begin
-      OldMarkUnhandledMacros := GlobalMacroList.MarkUnhandledMacros;
-      GlobalMacroList.MarkUnhandledMacros := false;
-      GlobalMacroList.SubstituteStr(CustomCaption, 0, 0, True);
-      if CustomCaption <> '' then begin
-        NewCaption := AddToCaption(NewCaption, CustomCaption);
+    if CustomCaption <> '' then
+      try
+        OldMarkUnhandledMacros := GlobalMacroList.MarkUnhandledMacros;
+        GlobalMacroList.MarkUnhandledMacros := false;
+        GlobalMacroList.SubstituteStr(CustomCaption, 0, 0, True);
+        if CustomCaption <> '' then
+          NewCaption := AddToCaption(NewCaption, CustomCaption);
+      finally
+        GlobalMacroList.MarkUnhandledMacros := OldMarkUnhandledMacros;
       end;
-      GlobalMacroList.MarkUnhandledMacros := OldMarkUnhandledMacros;
-    end;
   end;
 
   case ToolStatus of
@@ -11202,7 +11202,7 @@ end;
 
 function TMainIDE.DoFindRenameIdentifier(Rename: boolean): TModalResult;
 begin
-  Result:=FindRenameIdentifier.DoFindRenameIdentifier(true,Rename,nil);
+  Result:=FindRenameIdentExec.DoFindRenameIdentifier(true,Rename,nil);
 end;
 
 function TMainIDE.DoFindUsedUnitReferences: boolean;
@@ -11237,7 +11237,7 @@ begin
 
     DoShowSearchResultsView(iwgfShow);
     // create a search result page
-    //debugln(['ShowIdentifierReferences ',DbgSName(SearchResultsView)]);
+    //debugln(['DoFindUsedUnitReferences ',DbgSName(SearchResultsView)]);
     SearchPageIndex:=SearchResultsView.AddSearch(
       UsedUnitFilename,
       '',
@@ -11360,6 +11360,7 @@ var
 begin
   ActiveSrcEdit:=nil;
   if not BeginCodeTool(ActiveSrcEdit,ActiveUnitInfo,[]) then exit(false);
+  if (ActiveSrcEdit=nil) or not ActiveSrcEdit.CanShowCodeContext then exit(false);
   {$IFDEF IDE_DEBUG}
   debugln('');
   debugln('[TMainIDE.DoShowCodeContext] ************');

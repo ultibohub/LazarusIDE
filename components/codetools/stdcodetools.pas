@@ -7080,6 +7080,7 @@ type
     btCaseOf,
     btCaseColon,
     btCaseElse,
+    btCaseExpr, // case-expression, e.g. x:=case a of 1: 2 else 3 end
     btRepeat,
     btIf,
     btIfElse,
@@ -7310,6 +7311,45 @@ var
       Result:=true;
     end;
 
+    function CaseIsExpression: boolean;
+    // checks if the CASE at cursor starts a case-expression, e.g. x:=case a of
+    var
+      PriorAtom: TAtomPosition;
+    begin
+      Result:=false;
+      if TopBlockType(Stack)=btCaseExpr then
+        exit(true);
+      PriorAtom:=LastAtoms.GetPriorAtom;
+      if PriorAtom.StartPos<1 then exit;
+      if PriorAtom.Flag in [cafAssignment,cafEqual,cafComma,cafRoundBracketOpen,
+        cafEdgedBracketOpen,cafOtherOperator]
+      then
+        exit(true);
+      if (PriorAtom.Flag=cafWord)
+      and (CompareSrcIdentifiers(PriorAtom.StartPos,'NOT')
+        or WordIsBinaryOperator.DoItCaseInsensitive(Src,PriorAtom.StartPos,
+                                         PriorAtom.EndPos-PriorAtom.StartPos))
+      then
+        Result:=true;
+    end;
+
+    function CloseIfExprsInStatementExpr: boolean;
+    // closes if-expressions at the end of a case- or try-except-expression,
+    // e.g. case a of 1: 2 else if b then 3 else 4 end
+    // e.g. try a except if b then 3 else 4 end
+    var
+      i: Integer;
+    begin
+      Result:=true;
+      i:=Stack.Top;
+      while (i>=0) and (Stack.Stack[i].Typ in [btIf,btIfElse]) do
+        dec(i);
+      if (i<0) or (i=Stack.Top)
+      or not (Stack.Stack[i].Typ in [btCaseExpr,btExcept]) then exit;
+      while Stack.Top>i do
+        if not EndBlockIsOk then exit(false);
+    end;
+
     function InsertPosAtCursor: integer;
     begin
       Result:=BasicCodeTools.FindLineEndOrCodeInFrontOfPosition(Src,
@@ -7505,13 +7545,14 @@ var
           end;
           break;
         end else begin
+          if not CloseIfExprsInStatementExpr then exit;
           case TopBlockType(Stack) of
           btCaseOf,btCaseElse:
             begin
               if not EndBlockIsOk then exit; // close btCaseOf,btCaseElse
               if not EndBlockIsOk then exit; // close btCase
             end;
-          btBegin,btFinally,btExcept,btCase:
+          btBegin,btFinally,btExcept,btCase,btCaseExpr:
             if not EndBlockIsOk then exit;
           btCaseColon,btRepeat:
             begin
@@ -7626,11 +7667,17 @@ var
               Stack.Stack[Stack.Top].InnerStartPos:=-1;
             end;
           end else if UpAtomIs('CASE') then begin
-            BeginBlock(Stack,btCase,CurPos.StartPos)
+            if CaseIsExpression then
+              BeginBlock(Stack,btCaseExpr,CurPos.StartPos)
+            else
+              BeginBlock(Stack,btCase,CurPos.StartPos);
           end else if UpAtomIs('OF') then begin
-            CloseBrackets;
-            if TopBlockType(Stack)=btCase then
-              BeginBlock(Stack,btCaseOf,CurPos.StartPos);
+            // a case-expression is in brackets, e.g. DoIt(case a of
+            if TopBlockType(Stack)<>btCaseExpr then begin
+              CloseBrackets;
+              if TopBlockType(Stack)=btCase then
+                BeginBlock(Stack,btCaseOf,CurPos.StartPos);
+            end;
           end else if UpAtomIs('ELSE') then begin
             CloseBrackets;
             case TopBlockType(Stack) of

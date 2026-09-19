@@ -2632,6 +2632,16 @@ msgstr "Nie pokazuj IDE gdy program jest uruchomiony."
 msgid "Hide tab in single page windows"
 msgstr "Ukryj zakładkę w pojedynczym oknie"
 
+#: lazarusidestrconsts.dlghighlightbothsidesofcursorleft
+msgctxt "lazarusidestrconsts.dlghighlightbothsidesofcursorleft"
+msgid "On both sides (left first)"
+msgstr ""
+
+#: lazarusidestrconsts.dlghighlightbothsidesofcursorright
+msgctxt "lazarusidestrconsts.dlghighlightbothsidesofcursorright"
+msgid "On both sides (right first)"
+msgstr ""
+
 #: lazarusidestrconsts.dlghighlightcolor
 msgid "Highlight Color"
 msgstr "Kolor podświetlenia"
@@ -2641,11 +2651,15 @@ msgid "Highlight Font Color"
 msgstr "Kolor czcionki podświetlenia"
 
 #: lazarusidestrconsts.dlghighlightleftofcursor
-msgid "Left Of Caret"
+#, fuzzy
+#| msgid "Left Of Caret"
+msgid "Left of Caret"
 msgstr "Po lewej od kursora"
 
 #: lazarusidestrconsts.dlghighlightrightofcursor
-msgid "Right Of Caret"
+#, fuzzy
+#| msgid "Right Of Caret"
+msgid "Right of Caret"
 msgstr "Po prawej od kursora"
 
 #: lazarusidestrconsts.dlghintsparametersendernotused
@@ -5171,10 +5185,6 @@ msgstr "Opcja: Równaj do linii naprowadzających"
 msgid "Z-order"
 msgstr "Kolejność nakładania komponentów"
 
-#: lazarusidestrconsts.gldhighlightbothsidesofcursor
-msgid "On Both Sides"
-msgstr "Po obu stronach"
-
 #: lazarusidestrconsts.initdlgdebugchangepath
 msgid "Change path"
 msgstr ""
@@ -5709,6 +5719,10 @@ msgstr "Dodanie pakietu do projektu"
 #: lazarusidestrconsts.lisaddparameterbrackets
 msgid "Add parameter brackets"
 msgstr "Dodaj nawiasy parametrów funkcji"
+
+#: lazarusidestrconsts.lisaddpathtotrustedexe
+msgid "Add path to trusted executable"
+msgstr ""
 
 #: lazarusidestrconsts.lisaddthefollowingfiles
 msgid "Add the following files:"
@@ -6851,10 +6865,6 @@ msgstr ""
 #: lazarusidestrconsts.lischangeencoding
 msgid "Change Encoding"
 msgstr "Zmień kodowanie"
-
-#: lazarusidestrconsts.lischangefile
-msgid "Change file"
-msgstr "Zmień plik"
 
 #: lazarusidestrconsts.lischangemethodvisibilityto
 #, object-pascal-format
@@ -9138,12 +9148,6 @@ msgstr "Czy chcesz usunąć poprzedni plik \"%s\"?"
 #: lazarusidestrconsts.lisdeleteselectedmacro
 msgid "Delete selected macro?"
 msgstr "Usunąć zaznaczone makro?"
-
-#: lazarusidestrconsts.lisdeleteselectedtrustedcompilers
-#, fuzzy
-msgctxt "lazarusidestrconsts.lisdeleteselectedtrustedcompilers"
-msgid "Delete selected"
-msgstr "Usuń wybrane"
 
 #: lazarusidestrconsts.lisdeletethisaddition
 msgid "Delete this addition"
@@ -14884,6 +14888,10 @@ msgstr "Wklej ze schowka."
 msgid "Pastel Colors"
 msgstr "Kolory pastelowe"
 
+#: lazarusidestrconsts.lispathalreadyexists
+msgid "The path already exists."
+msgstr ""
+
 #: lazarusidestrconsts.lispatheditbrowse
 msgctxt "lazarusidestrconsts.lispatheditbrowse"
 msgid "Browse"
@@ -16650,9 +16658,9 @@ msgstr ""
 msgid "Reopen project"
 msgstr "Otwórz projekt ponownie"
 
-#: lazarusidestrconsts.lisreopenwithanotherencoding
-msgid "Reopen with another encoding"
-msgstr "Otwórz z innym kodowaniem"
+#: lazarusidestrconsts.lisreopenwithnewencoding
+msgid "Reopen with new encoding"
+msgstr ""
 
 #: lazarusidestrconsts.lisrepeat
 msgctxt "lazarusidestrconsts.lisrepeat"
@@ -17019,6 +17027,10 @@ msgstr "Zapisz wyświetlone komunikaty do pliku..."
 #: lazarusidestrconsts.lissavespace
 msgid "Save "
 msgstr "Zapisz "
+
+#: lazarusidestrconsts.lissavewithnewencoding
+msgid "Save with new encoding"
+msgstr ""
 
 #: lazarusidestrconsts.lissavingfileasloosescharactersatlinecolumn
 #, object-pascal-format
@@ -18494,7 +18506,7 @@ msgid "Trust project compiler?"
 msgstr ""
 
 #: lazarusidestrconsts.listrustcompilerthistime
-msgid "Trust this time"
+msgid "Trust until project closes"
 msgstr ""
 
 #: lazarusidestrconsts.listrustedcommands

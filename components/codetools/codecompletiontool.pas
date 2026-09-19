@@ -10105,18 +10105,30 @@ function TCodeCompletionCodeTool.CompleteCode(CursorPos: TCodeXYPosition;
         end;
         cafWord: // stop on keywords
           if UpAtomIs('BEGIN') or UpAtomIs('END')
-          or UpAtomIs('TRY') or UpAtomIs('FINALLY') or UpAtomIs('EXCEPT')
-          or UpAtomIs('FOR') or UpAtomIs('TO') or UpAtomIs('DO')
+          or ((UpAtomIs('TRY') or UpAtomIs('EXCEPT') or UpAtomIs('DO'))
+            and not IsTryExpressionAtom(CurPos.StartPos))
+          or UpAtomIs('FINALLY')
+          or UpAtomIs('FOR') or UpAtomIs('TO')
           or UpAtomIs('REPEAT') or UpAtomIs('UNTIL') or UpAtomIs('WHILE')
-          or UpAtomIs('CASE')
+          or (UpAtomIs('CASE') and not IsCaseExpressionAtom(CurPos.StartPos))
           then
             break
           else if (UpAtomIs('IF') or UpAtomIs('THEN') or UpAtomIs('ELSE'))
-          and not IsIfExpressionKeyword(CurPos.StartPos) then
-            // statement if, not an if-expression
+          and not IsIfExpressionKeyword(CurPos.StartPos)
+          and not (UpAtomIs('ELSE') and (IsCaseExpressionAtom(CurPos.StartPos)
+                                         or IsTryExpressionAtom(CurPos.StartPos)))
+          then
+            // statement if, not an if-, case- or try-except-expression
             break;
+        cafEND:
+          // skip case- or try-except-expression, e.g. v := case a of 1: 2 else 3 end + 4
+          if IsCaseExpressionAtom(CurPos.StartPos)
+          or IsTryExpressionAtom(CurPos.StartPos) then
+            ReadBackTilBlockStart;
         cafSemicolon:
-          break; // stop on semicolon
+          if not (IsCaseExpressionAtom(CurPos.StartPos)
+                  or IsTryExpressionAtom(CurPos.StartPos)) then
+            break; // stop on semicolon
       end;
     end;
   end;

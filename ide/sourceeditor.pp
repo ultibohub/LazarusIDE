@@ -531,6 +531,8 @@ type
     function GetProjectFile: TLazProjectFile; override;
     procedure UpdateProjectFile(AnUpdates: TSrcEditProjectUpdatesNeeded = []); override;
     function GetDesigner(LoadForm: boolean): TIDesigner; override;
+    function CanShowCodeContext: boolean;
+    procedure SetIfdefNodeState(ALinePos, AstartPos: Integer; AState: TSynMarkupIfdefNodeState);
 
     // notebook
     procedure Activate;
@@ -546,7 +548,6 @@ type
     function  SourceToDebugLine(aLinePos: Integer): Integer;
     function  DebugToSourceLine(aLinePos: Integer): Integer; override;
 
-    procedure SetIfdefNodeState(ALinePos, AstartPos: Integer; AState: TSynMarkupIfdefNodeState);
     property OnIfdefNodeStateRequest: TSynMarkupIfdefStateRequest read FOnIfdefNodeStateRequest write FOnIfdefNodeStateRequest;
   public
     // properties
@@ -2027,6 +2028,18 @@ begin
   for P in TPascalCompilerModeSwitch do
     if C[P] in CompilerModeSwitches then
       Result := Result + [P];
+end;
+
+function FindReadableEncoding: string;
+// Menuitems under SrcEditSubMenuEncoding have the readable names
+// of supported encodings instead of normalized lowercase names.
+var
+  i: Integer;
+begin
+  for i:=0 to SrcEditSubMenuEncoding.Count-1 do
+    if SrcEditSubMenuEncoding.Items[i].Checked then
+      exit(SrcEditSubMenuEncoding.Items[i].Caption);
+  Result:='';
 end;
 
 { TToolButton_GotoBookmarks }
@@ -4536,7 +4549,7 @@ begin
       if AutoBlockCompleteChar(AChar) then
         Handled:=true;
       if EditorOpts.AutoDisplayFunctionPrototypes then
-         if (aChar = '(') or (aChar = ',') then
+         if (aChar = '(') or (aChar = ',') and CanShowCodeContext then
             SourceNotebook.StartShowCodeContext(False);
 
       if FCodeCompletionState.State = ccsOnTypingScheduled then begin
@@ -6744,6 +6757,17 @@ begin
   Result := FEditor.IDEGutterMarks.DebugLineToSourceLine(aLinePos);
 end;
 
+function TSourceEditor.CanShowCodeContext: boolean;
+var
+  MainCode: TCodeBuffer;
+begin
+  if CodeBuffer = nil then exit(false);
+  if CodeBuffer.IsVirtual then
+    exit(FEditor.Highlighter is TSynPasSyn);
+  MainCode := CodeToolBoss.GetMainCode(CodeBuffer);
+  Result := (MainCode <> nil) and (MainCode.Scanner <> nil);
+end;
+
 procedure TSourceEditor.SetIfdefNodeState(ALinePos, AstartPos: Integer;
   AState: TSynMarkupIfdefNodeState);
 begin
@@ -7343,21 +7367,19 @@ var
   CurResult: TModalResult;
 begin
   SrcEdit:=GetActiveSE;
-  if (SrcEdit=nil) or not (Sender is TIDEMenuItem) then exit;
+  if (SrcEdit=nil) or (SrcEdit.CodeBuffer=nil) or not (Sender is TIDEMenuItem) then
+    exit;
   IDEMenuItem:=TIDEMenuItem(Sender);
-  NewEncoding:=NormalizeEncoding(IDEMenuItem.Caption);
+  NewEncoding:=IDEMenuItem.Caption;
   if SysUtils.CompareText(copy(NewEncoding,1,length(EncodingAnsi)+2),EncodingAnsi+' (')=0
   then      // the ansi encoding is shown as 'ansi (system encoding)' -> cut
-    NewEncoding:=EncodingAnsi
+    NewEncoding:='Ansi' //EncodingAnsi      Match with MenuItem captions
   else if NewEncoding=lisUtf8WithBOM then
-    NewEncoding:=EncodingUTF8BOM;
+    NewEncoding:='UTF-8BOM'; //EncodingUTF8BOM;
   //DebugLn(['Hint: (lazarus) TSourceNotebook.EncodingClicked NewEncoding=',NewEncoding]);
-  if SrcEdit.CodeBuffer=nil then exit;
-  OldEncoding:=NormalizeEncoding(SrcEdit.CodeBuffer.DiskEncoding);
-  if OldEncoding='' then
-    OldEncoding:=GetDefaultTextEncoding;
-  if NewEncoding=SrcEdit.CodeBuffer.DiskEncoding then exit;
-  DebugLn(['Hint: (lazarus) TSourceNotebook.EncodingClicked Old=',OldEncoding,' New=',NewEncoding]);
+  OldEncoding:=FindReadableEncoding;  // A pleasantly formatted encoding name
+  Assert(OldEncoding<>'', 'TSourceNotebook.EncodingClicked: OldEncoding is empty.');
+  if NewEncoding=OldEncoding then exit;
   if SrcEdit.ReadOnly then begin
     if SrcEdit.CodeBuffer.IsVirtual then
       CurResult:=mrCancel
@@ -7365,18 +7387,19 @@ begin
       CurResult:=IDEQuestionDialog(lisChangeEncoding,
         Format(lisEncodingOfFileOnDiskIsNewEncodingIs,
                [SrcEdit.CodeBuffer.Filename, LineEnding, OldEncoding, NewEncoding]),
-        mtConfirmation, [mrOk, lisReopenWithAnotherEncoding, mrCancel]);
-  end else begin
+        mtConfirmation, [mrOk, lisReopenWithNewEncoding, mrCancel]);
+  end
+  else begin
     if SrcEdit.CodeBuffer.IsVirtual then
       CurResult:=IDEQuestionDialog(lisChangeEncoding,
         Format(lisEncodingOfFileOnDiskIsNewEncodingIs,
                [SrcEdit.CodeBuffer.Filename, LineEnding, OldEncoding, NewEncoding]),
-        mtConfirmation, [mrYes, lisChangeFile, mrCancel])
+        mtConfirmation, [mrYes, lisSaveWithNewEncoding, mrCancel])
     else
       CurResult:=IDEQuestionDialog(lisChangeEncoding,
         Format(lisEncodingOfFileOnDiskIsNewEncodingIs,
                [SrcEdit.CodeBuffer.Filename, LineEnding, OldEncoding, NewEncoding]),
-        mtConfirmation, [mrYes,lisChangeFile,mrOk,lisReopenWithAnotherEncoding,mrCancel]);
+        mtConfirmation, [mrYes,lisSaveWithNewEncoding,mrOk,lisReopenWithNewEncoding,mrCancel]);
   end;
   if CurResult=mrYes then begin
     // change file
@@ -7389,18 +7412,16 @@ begin
     and (LazarusIDE.DoSaveEditorFile(SrcEdit, []) <> mrOk)
     then
       DebugLn(['Hint: (lazarus) TSourceNotebook.EncodingClicked LazarusIDE.DoSaveEditorFile failed']);
-  end else if CurResult=mrOK then begin
+  end
+  else if CurResult=mrOK then begin
     // reopen with another encoding
     if SrcEdit.Modified then begin
       if IDEQuestionDialog(lisAbandonChanges,
         Format(lisAllYourModificationsToWillBeLostAndTheFileReopened,
                [SrcEdit.CodeBuffer.Filename, LineEnding]),
-        mtConfirmation,[mrOk,mrAbort],'') = mrOk
-      then begin
-        SrcEdit.Modified:=false;
-        UEI:=EditableProject1.EditorInfoWithEditorComponent(SrcEdit);
-        UEI.UnitInfo.Modified:=false;
-      end
+        mtConfirmation,[mrOk,mrCancel],'') = mrOk
+      then
+        SrcEdit.Modified:=false
       else
         exit;
     end;
@@ -7415,6 +7436,8 @@ begin
     SrcEdit.EditorComponent.BeginUpdate;
     SrcEdit.CodeBuffer.AssignTo(SrcEdit.EditorComponent.Lines,False);
     SrcEdit.EditorComponent.EndUpdate;
+    UEI:=EditableProject1.EditorInfoWithEditorComponent(SrcEdit);
+    UEI.UnitInfo.Modified:=false;
   end;
 end;
 
@@ -8068,8 +8091,7 @@ begin
       IDEMenuItem.OnClick:=@EncodingClicked;
     end;
     if IDEMenuItem is TIDEMenuCommand then
-      TIDEMenuCommand(IDEMenuItem).Checked:=
-        Encoding=NormalizeEncoding(CurEncoding);
+      TIDEMenuCommand(IDEMenuItem).Checked:=Encoding=NormalizeEncoding(CurEncoding);
   end;
   List.Free;
 end;

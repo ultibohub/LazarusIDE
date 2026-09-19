@@ -2557,6 +2557,16 @@ msgstr "ບໍ່ຕ້ອງສະແດງ IDE ເລີຍໃນຂະນະ�
 msgid "Hide tab in single page windows"
 msgstr "ເຊື່ອງແຖບໃນປ່ອງຢ້ຽມໜ້າດຽວ"
 
+#: lazarusidestrconsts.dlghighlightbothsidesofcursorleft
+msgctxt "lazarusidestrconsts.dlghighlightbothsidesofcursorleft"
+msgid "On both sides (left first)"
+msgstr ""
+
+#: lazarusidestrconsts.dlghighlightbothsidesofcursorright
+msgctxt "lazarusidestrconsts.dlghighlightbothsidesofcursorright"
+msgid "On both sides (right first)"
+msgstr ""
+
 #: lazarusidestrconsts.dlghighlightcolor
 msgid "Highlight Color"
 msgstr "ສີໄຮໄລ້"
@@ -2566,11 +2576,15 @@ msgid "Highlight Font Color"
 msgstr "ສີຟອນໄຮໄລ້"
 
 #: lazarusidestrconsts.dlghighlightleftofcursor
-msgid "Left Of Caret"
+#, fuzzy
+#| msgid "Left Of Caret"
+msgid "Left of Caret"
 msgstr "ຊ້າຍຂອງຕົວຊີ້ພິມ"
 
 #: lazarusidestrconsts.dlghighlightrightofcursor
-msgid "Right Of Caret"
+#, fuzzy
+#| msgid "Right Of Caret"
+msgid "Right of Caret"
 msgstr "ຂວາຂອງຕົວຊີ້ພິມ"
 
 #: lazarusidestrconsts.dlghintsparametersendernotused
@@ -5018,10 +5032,6 @@ msgstr "ຕົວເລືອກ: ດູດເຂົ້າຫາເສັ້ນ�
 msgid "Z-order"
 msgstr "Z-order"
 
-#: lazarusidestrconsts.gldhighlightbothsidesofcursor
-msgid "On Both Sides"
-msgstr "ທັງສອງຂ້າງ"
-
 #: lazarusidestrconsts.initdlgdebugchangepath
 msgid "Change path"
 msgstr "ປ່ຽນທີ່ຢູ່"
@@ -5551,6 +5561,10 @@ msgstr "ເພີ່ມແພັກເກັດໃສ່ໂປຣເຈັກ"
 #: lazarusidestrconsts.lisaddparameterbrackets
 msgid "Add parameter brackets"
 msgstr "ເພີ່ມວົງເລັບພາຣາມິເຕີ"
+
+#: lazarusidestrconsts.lisaddpathtotrustedexe
+msgid "Add path to trusted executable"
+msgstr ""
 
 #: lazarusidestrconsts.lisaddthefollowingfiles
 msgid "Add the following files:"
@@ -6666,10 +6680,6 @@ msgstr "ປ່ຽນພິກັດ %s ຂອງ %s ຈາກ \"%d\" ເປັ�
 #: lazarusidestrconsts.lischangeencoding
 msgid "Change Encoding"
 msgstr "ປ່ຽນການເຂົ້າລະຫັດ"
-
-#: lazarusidestrconsts.lischangefile
-msgid "Change file"
-msgstr "ປ່ຽນຟາຍລ໌"
 
 #: lazarusidestrconsts.lischangemethodvisibilityto
 #, object-pascal-format
@@ -8920,12 +8930,6 @@ msgstr "ລົບໄຟລ໌ເກົ່າ \"%s\" ບໍ່?"
 #: lazarusidestrconsts.lisdeleteselectedmacro
 msgid "Delete selected macro?"
 msgstr "ລົບ Macro ທີ່ເລືອກບໍ່?"
-
-#: lazarusidestrconsts.lisdeleteselectedtrustedcompilers
-#, fuzzy
-msgctxt "lazarusidestrconsts.lisdeleteselectedtrustedcompilers"
-msgid "Delete selected"
-msgstr "ລຶບທີ່ເລືອກ"
 
 #: lazarusidestrconsts.lisdeletethisaddition
 msgid "Delete this addition"
@@ -14619,6 +14623,10 @@ msgstr "ວາງຈາກ clipboard."
 msgid "Pastel Colors"
 msgstr "ສີພາສເທວ"
 
+#: lazarusidestrconsts.lispathalreadyexists
+msgid "The path already exists."
+msgstr ""
+
 #: lazarusidestrconsts.lispatheditbrowse
 msgctxt "lazarusidestrconsts.lispatheditbrowse"
 msgid "Browse"
@@ -16357,9 +16365,9 @@ msgstr "ຂໍ້ຂັດແຍ່ງການປ່ຽນຊື່"
 msgid "Reopen project"
 msgstr "ເປີດໂຄງການຄືນໃໝ່"
 
-#: lazarusidestrconsts.lisreopenwithanotherencoding
-msgid "Reopen with another encoding"
-msgstr "ເປີດຄືນໃໝ່ດ້ວຍການເຂົ້າລະຫັດອື່ນ"
+#: lazarusidestrconsts.lisreopenwithnewencoding
+msgid "Reopen with new encoding"
+msgstr ""
 
 #: lazarusidestrconsts.lisrepeat
 msgctxt "lazarusidestrconsts.lisrepeat"
@@ -16729,6 +16737,10 @@ msgstr "ບັນທຶກຂໍ້ຄວາມທີ່ສະແດງລົງ
 #: lazarusidestrconsts.lissavespace
 msgid "Save "
 msgstr "ບັນທຶກ "
+
+#: lazarusidestrconsts.lissavewithnewencoding
+msgid "Save with new encoding"
+msgstr ""
 
 #: lazarusidestrconsts.lissavingfileasloosescharactersatlinecolumn
 #, object-pascal-format
@@ -18182,7 +18194,7 @@ msgid "Trust project compiler?"
 msgstr ""
 
 #: lazarusidestrconsts.listrustcompilerthistime
-msgid "Trust this time"
+msgid "Trust until project closes"
 msgstr ""
 
 #: lazarusidestrconsts.listrustedcommands

@@ -2551,6 +2551,16 @@ msgstr "Não mostrar o IDE enquanto o programa é executado."
 msgid "Hide tab in single page windows"
 msgstr "Ocultar separador em janelas de página única"
 
+#: lazarusidestrconsts.dlghighlightbothsidesofcursorleft
+msgctxt "lazarusidestrconsts.dlghighlightbothsidesofcursorleft"
+msgid "On both sides (left first)"
+msgstr ""
+
+#: lazarusidestrconsts.dlghighlightbothsidesofcursorright
+msgctxt "lazarusidestrconsts.dlghighlightbothsidesofcursorright"
+msgid "On both sides (right first)"
+msgstr ""
+
 #: lazarusidestrconsts.dlghighlightcolor
 msgid "Highlight Color"
 msgstr "Cor de realce"
@@ -2560,11 +2570,15 @@ msgid "Highlight Font Color"
 msgstr "Cor do realce da letra"
 
 #: lazarusidestrconsts.dlghighlightleftofcursor
-msgid "Left Of Caret"
+#, fuzzy
+#| msgid "Left Of Caret"
+msgid "Left of Caret"
 msgstr "Esquerda do carácter"
 
 #: lazarusidestrconsts.dlghighlightrightofcursor
-msgid "Right Of Caret"
+#, fuzzy
+#| msgid "Right Of Caret"
+msgid "Right of Caret"
 msgstr "Direita do carácter"
 
 #: lazarusidestrconsts.dlghintsparametersendernotused
@@ -5006,10 +5020,6 @@ msgstr "Opção: alinhar às linhas guia"
 msgid "Z-order"
 msgstr "Ordem Z"
 
-#: lazarusidestrconsts.gldhighlightbothsidesofcursor
-msgid "On Both Sides"
-msgstr "Em ambos os lados"
-
 #: lazarusidestrconsts.initdlgdebugchangepath
 msgid "Change path"
 msgstr "Alterar caminho"
@@ -5539,6 +5549,10 @@ msgstr "Adicionar pacote ao projecto"
 #: lazarusidestrconsts.lisaddparameterbrackets
 msgid "Add parameter brackets"
 msgstr "Adicionar parênteses de parâmetro"
+
+#: lazarusidestrconsts.lisaddpathtotrustedexe
+msgid "Add path to trusted executable"
+msgstr ""
 
 #: lazarusidestrconsts.lisaddthefollowingfiles
 msgid "Add the following files:"
@@ -6652,10 +6666,6 @@ msgstr "Mudada %s coordenada de %s de \"%d\" para \"%d\" dentro de %s."
 #: lazarusidestrconsts.lischangeencoding
 msgid "Change Encoding"
 msgstr "Mudar codificação"
-
-#: lazarusidestrconsts.lischangefile
-msgid "Change file"
-msgstr "Mudar ficheiro"
 
 #: lazarusidestrconsts.lischangemethodvisibilityto
 #, object-pascal-format
@@ -8904,11 +8914,6 @@ msgstr "Eliminar ficheiro antigo \"%s\"?"
 #: lazarusidestrconsts.lisdeleteselectedmacro
 msgid "Delete selected macro?"
 msgstr "Eliminar a macro seleccionada?"
-
-#: lazarusidestrconsts.lisdeleteselectedtrustedcompilers
-msgctxt "lazarusidestrconsts.lisdeleteselectedtrustedcompilers"
-msgid "Delete selected"
-msgstr "Eliminar selecção"
 
 #: lazarusidestrconsts.lisdeletethisaddition
 msgid "Delete this addition"
@@ -14602,6 +14607,10 @@ msgstr "Colar da prancheta."
 msgid "Pastel Colors"
 msgstr "Cores pastel"
 
+#: lazarusidestrconsts.lispathalreadyexists
+msgid "The path already exists."
+msgstr ""
+
 #: lazarusidestrconsts.lispatheditbrowse
 msgctxt "lazarusidestrconsts.lispatheditbrowse"
 msgid "Browse"
@@ -16340,9 +16349,9 @@ msgstr "Conflito de renomeação"
 msgid "Reopen project"
 msgstr "Reabrir projecto"
 
-#: lazarusidestrconsts.lisreopenwithanotherencoding
-msgid "Reopen with another encoding"
-msgstr "Reabrir com outra codificação"
+#: lazarusidestrconsts.lisreopenwithnewencoding
+msgid "Reopen with new encoding"
+msgstr ""
 
 #: lazarusidestrconsts.lisrepeat
 msgctxt "lazarusidestrconsts.lisrepeat"
@@ -16712,6 +16721,10 @@ msgstr "Gravar mensagens mostradas em ficheiro..."
 #: lazarusidestrconsts.lissavespace
 msgid "Save "
 msgstr "Gravar "
+
+#: lazarusidestrconsts.lissavewithnewencoding
+msgid "Save with new encoding"
+msgstr ""
 
 #: lazarusidestrconsts.lissavingfileasloosescharactersatlinecolumn
 #, object-pascal-format
@@ -18165,7 +18178,9 @@ msgid "Trust project compiler?"
 msgstr "Confiar no compilador do projecto?"
 
 #: lazarusidestrconsts.listrustcompilerthistime
-msgid "Trust this time"
+#, fuzzy
+#| msgid "Trust this time"
+msgid "Trust until project closes"
 msgstr "Esta vez"
 
 #: lazarusidestrconsts.listrustedcommands

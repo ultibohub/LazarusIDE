@@ -17,6 +17,9 @@ uses
   // LeakView
   LeakInfo, SynEdit;
 
+const
+  CMaxRecentFiles = 8;
+
 type
   TJumpProc = procedure (Sender: TObject; const SourceName: string;
                          Line, Column: integer) of object;
@@ -174,8 +177,10 @@ end;
 
 procedure THeapTrcViewForm.chkStayOnTopChange(Sender: TObject);
 begin
-  if chkStayOnTop.Checked then Self.formStyle := fsStayOnTop
-  else Self.formStyle := fsNormal;
+  if chkStayOnTop.Checked then
+    FormStyle := fsStayOnTop
+  else
+    FormStyle := fsNormal;
 end;
 
 procedure THeapTrcViewForm.chkUseRawChange(Sender: TObject);
@@ -557,42 +562,44 @@ begin
 end;
 
 procedure THeapTrcViewForm.LoadState(cfg:TXMLConfig);
+const
+  // with several monitors negative coordinates can be valid, so something further from zero is needed
+  InvalidCoord = LongInt.MaxValue;
 var
-  b     : TRect;
+  b     : TRect = (Left: InvalidCoord{%H-});
   isTop : Boolean;
   st    : TStringList;
   s     : WideString;
   i     : Integer;
-const
-  InitFormStyle: array [Boolean] of TFormStyle = (fsNormal, fsStayOnTop);
 begin
   isTop:=True;
-  b:=BoundsRect;
   st:=TStringList.Create;
   try
     istop:=cfg.GetValue('isStayOnTop',isTop);
     cfg.OpenKey('bounds');
-    b.Left:=cfg.GetValue('left', b.Left);
-    b.Top:=cfg.GetValue('top', b.Top);
-    b.Right:=cfg.GetValue('right', b.Right);
-    b.Bottom:=cfg.GetValue('bottom', b.Bottom);
+    b.Left   := cfg.GetValue('left'  , InvalidCoord);
+    b.Top    := cfg.GetValue('top'   , InvalidCoord);
+    b.Right  := cfg.GetValue('right' , InvalidCoord);
+    b.Bottom := cfg.GetValue('bottom', InvalidCoord);
     cfg.CloseKey;
-
-    if b.Right-b.Left<=0 then b.Right:=b.Left+40;
-    if b.Bottom-b.Top<=0 then b.Bottom:=b.Top+40;
-
-    for i:=0 to 7 do begin
+    for i:=0 to CMaxRecentFiles-1 do begin
       s:=cfg.GetValue(DOMString('path'+IntToStr(i)), '');
       if s<>'' then st.Add(UTF8Encode(s));
     end;
-
   except
   end;
-  inAnyMonitor(b);
 
-  FormStyle:=InitFormStyle[isTop];
-  BoundsRect:=b;
+  if (b.Left = InvalidCoord) or (b.Top = InvalidCoord) then
+  begin
+    Position := poWorkAreaCenter;
+    MoveToDefaultPosition; // apply immediately
+    Position := poDesigned; // to save previous coords when calling "Show" after closing (hiding)
+  end else begin
+    inAnyMonitor(b);
+    BoundsRect := b; // Position=poDesigned already in LFM
+  end;
   chkStayOnTop.Checked := isTop;
+  chkStayOnTopChange(nil);
   if st.Count>0 then begin
     edtTrcFileName.Items.AddStrings(st);
     edtTrcFileName.ItemIndex:=0;
@@ -609,8 +616,8 @@ begin
   s := edtTrcFileName.Text; // store current text
   i:=edtTrcFileName.Items.IndexOf(FileName);
   if (i<0) then begin
-    if edtTrcFileName.Items.Count=8 then
-      edtTrcFileName.Items.Delete(7);
+    if edtTrcFileName.Items.Count=CMaxRecentFiles then
+      edtTrcFileName.Items.Delete(CMaxRecentFiles-1);
   end else
     edtTrcFileName.Items.Delete(i);
   edtTrcFileName.Items.Insert(0, FileName);

@@ -1837,9 +1837,10 @@ resourcestring
   dlgKeyLink = '(Edit Key)';
   dlgBracketHighlight = 'Bracket highlight';
   dlgNoBracketHighlight = 'No Highlight';
-  dlgHighlightLeftOfCursor = 'Left Of Caret';
-  dlgHighlightRightOfCursor = 'Right Of Caret';
-  gldHighlightBothSidesOfCursor = 'On Both Sides';
+  dlgHighlightLeftOfCursor = 'Left of Caret';
+  dlgHighlightRightOfCursor = 'Right of Caret';
+  dlgHighlightBothSidesOfCursorLeft = 'On both sides (left first)';
+  dlgHighlightBothSidesOfCursorRight = 'On both sides (right first)';
   dlgTrimSpaceTypeCaption = 'Trim spaces style';
   dlgTrimSpaceTypeLeaveLine = 'Leave line';
   dlgTrimSpaceTypeEditLine = 'Line Edited';
@@ -2482,13 +2483,14 @@ resourcestring
   lisThePackageWantsToUseTheCompiler = 'The package "%s" wants to use the compiler:%s%s%s'
     +'This is not the default compiler configured in the IDE. Opening a package with a custom '
     +'compiler can run arbitrary programs.%sDo you want to trust and use this compiler?';
-  lisTrustCompilerThisTime = 'Trust this time';
+  lisTrustCompilerThisTime = 'Trust until project closes';
   lisTrustCompilerAlways = 'Trust always';
   lisDoNotTrustCompiler = 'Do not trust';
   lisUseDefaultCompiler = 'Use default compiler';
   lisTrustedCompilers = 'Trusted compilers';
-  lisDeleteSelectedTrustedCompilers = 'Delete selected';
   lisTrustedCommands = 'Trusted commands';
+  lisAddPathToTrustedExe = 'Add path to trusted executable';
+  lisPathAlreadyExists = 'The path already exists.';
   lisTheProjectWantsToUseTheCompilerBuild = 'The project "%s" wants to use the compiler:%s%s%s'
     +'This is not the default compiler configured in the IDE. Building with a custom '
     +'compiler can run arbitrary programs.%sDo you want to trust and use this compiler?';
@@ -2952,12 +2954,13 @@ resourcestring
   uemBookmarkNUnSet = 'Bookmark &%s';
   uemBookmarkNSet   = 'Bookmark &%s: %s';
   lisChangeEncoding = 'Change Encoding';
-  lisChangeFile = 'Change file';
-  lisEncodingOfFileOnDiskIsNewEncodingIs = 'Encoding of file "%s"%son disk is %s. New encoding is %s.';
-  lisReopenWithAnotherEncoding = 'Reopen with another encoding';
+  lisEncodingOfFileOnDiskIsNewEncodingIs = 'Encoding of file "%s"'
+    +'%son disk is %s. New encoding is %s.';
+  lisSaveWithNewEncoding = 'Save with new encoding';
+  lisReopenWithNewEncoding = 'Reopen with new encoding';
   lisAbandonChanges = 'Abandon changes?';
-  lisAllYourModificationsToWillBeLostAndTheFileReopened = 'All your modifications '
-    +'to "%s"%swill be lost and the file reopened.';
+  lisAllYourModificationsToWillBeLostAndTheFileReopened = 'All your modifications to "%s"'
+    +'%swill be lost and the file reopened.';
   lisOpenLfm = 'Open %s';
   lisUtf8WithBOM = 'UTF-8 with BOM';
   uemToggleBookmark = '&Toggle Bookmark';

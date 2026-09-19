@@ -636,7 +636,6 @@ type
     procedure UpdateUsageCounts(const ConfigFilename: string);
     function UnitMustBeSaved(UnitInfo: TUnitInfo; WriteFlags: TProjectWriteFlags;
                              SaveSession: boolean): boolean;
-    //procedure LoadDefaultSession;
     procedure MacroEngineSubstitution({%H-}TheMacro: TTransferMacro;
       const MacroName: string; var s: string;
       const Data: PtrInt; var Handled, Abort: boolean; Depth: integer);
@@ -1230,6 +1229,8 @@ procedure TUnitInfo.ClearModifieds;
 begin
   Modified:=false;
   SessionModified:=false;
+  if Assigned(Source) then
+    Source.Modified:=false;
 end;
 
 procedure TUnitInfo.ClearComponentDependencies;
