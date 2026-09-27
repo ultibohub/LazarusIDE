@@ -2136,6 +2136,8 @@ clean:
 	${DELTREE} tachart/wmf/lib/*
 	${DELTREE} vlc/lib/*
 	${DELTREE} wiki/lazwiki/lib/*
+	${DELTREE} lazmetafile/lib/*
+	${DELTREE} svgimage/lib/*
 cleanall: clean
 distclean:
 	${DELTREE} lazutils/lib/*
@@ -2282,3 +2284,5 @@ distclean:
 	${DELTREE} tachart/wmf/lib/*
 	${DELTREE} vlc/lib/*
 	${DELTREE} wiki/lazwiki/lib/*
+	${DELTREE} lazmetafile/lib/*
+	${DELTREE} svgimage/lib/*
