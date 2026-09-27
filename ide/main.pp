@@ -3319,11 +3319,31 @@ end;
 {------------------------------------------------------------------------------}
 
 procedure TMainIDE.mnuToggleFormUnitClicked(Sender: TObject);
+var
+  ShowTheForm: Boolean;
 begin
   if IDETabMaster <> nil then
-    IDETabMaster.ToggleFormUnit
-  else
-    DoBringToFrontFormOrUnit;
+  begin
+    // the designer is docked into the source editor, there is no layout to switch
+    IDETabMaster.ToggleFormUnit;
+    exit;
+  end;
+
+  // Set the ShowTheForm before switching the desktop
+  ShowTheForm := DisplayState = dsSource;
+
+  if ShowTheForm then
+  begin
+    // Desktop first, form second: RestoreSimpleLayout raises every registered IDE window
+    EnvironmentGuiOpts.EnableDesignDesktop;
+    DoShowDesignerFormOfCurrentSrc(false);
+    if DisplayState <> dsForm then
+      EnvironmentGuiOpts.DisableDesignDesktop;  // there was no designer form
+  end else
+  begin
+    EnvironmentGuiOpts.DisableDesignDesktop;
+    DoShowSourceOfActiveDesignerForm;
+  end;
 end;
 
 procedure TMainIDE.mnuViewAnchorEditorClicked(Sender: TObject);
@@ -4086,7 +4106,12 @@ begin
   if (MainIDEBar <> nil) and not IDEIsClosing and MainIDEBar.HandleAllocated then
   begin
     if (ToolStatus = itDebugger) then
-      EnvironmentGuiOpts.EnableDebugDesktop
+    begin
+      // leave the design desktop first, so that LastDesktopBeforeDebug gets the
+      // desktop the user really works with
+      EnvironmentGuiOpts.DisableDesignDesktop;
+      EnvironmentGuiOpts.EnableDebugDesktop;
+    end
     else if (ToolStatus <> itExiting) then
       EnvironmentGuiOpts.DisableDebugDesktop;
   end;
@@ -8221,6 +8246,7 @@ var
   CompilerKind: TPascalCompiler;
   ErrMsg: String;
   r: integer;
+  CheckingView: TExtToolView;
 begin
   if ToolStatus<>itNone then begin
     IDEMessageDialog(lisNotNow,lisYouCanNotBuildLazarusWhileDebuggingOrCompiling,
@@ -8257,6 +8283,10 @@ begin
   fBuilder.ProfileChanged:=false;
   OldToolStatus:=ToolStatus;
   ToolStatus:=itBuilder;
+  // show "Checking ..." while the IDE checks files before starting the compiler
+  CheckingView:=MessagesView.GetView(lisCheckingFiles,true);
+  MessagesView.MessagesFrame1.MessagesCtrl.Invalidate;
+  Application.ProcessMessages;
   with MiscellaneousOptions do
   try
     if HasGUI then begin
@@ -8344,6 +8374,9 @@ begin
     end;
 
     // make lazarus ide
+    CheckingView:=MessagesView.GetView(lisCheckingFiles,false);
+    if CheckingView<>nil then
+      MessagesView.DeleteView(CheckingView);
     IDEBuildFlags:=IDEBuildFlags+[blfUseMakeIDECfg,blfDontClean];
     Result:=fBuilder.MakeLazarus(BuildLazProfiles.Current, IDEBuildFlags);
     if Result<>mrOk then exit;
@@ -8353,6 +8386,9 @@ begin
       MiscellaneousOptions.Save;
     end;
   finally
+    CheckingView:=MessagesView.GetView(lisCheckingFiles,false);
+    if CheckingView<>nil then
+      MessagesView.DeleteView(CheckingView);
     MainBuildBoss.SetBuildTargetProject1(true);
     ToolStatus:=OldToolStatus;
     DoCallBuildingFinishedHandler(lihtLazarusBuildingFinished, Self, Result=mrOk);
@@ -10036,8 +10072,8 @@ end;
 procedure TMainIDE.DoShowMessagesView;
 begin
   //debugln('TMainIDE.DoShowMessagesView');
-  if not MessagesView.IsVisible then
-    MessagesView.ApplyIDEOptions;
+  MessagesView.ApplyIDEOptions;
+
   // don't move the messagesview, if it was already visible.
   IDEWindowCreators.ShowForm(MessagesView, EnvironmentGuiOpts.MsgViewFocus);
 end;

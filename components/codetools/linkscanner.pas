@@ -227,6 +227,8 @@ type
     cmsAnonymousFunctions, { allow anonymous functions }
     cmsMultiLineStrings,   { Multiline strings }
     cmsStatementExpressions, { allow if-, case- and try-except-expressions }
+    cmsReorderedoperators, { allow "not in" and "is not" operators}
+    cmsTypeInquiry,        { allow "type of" operator }
 
     cmsExternalClass,      { pas2js: allow  class external [pkgname] name [symbol] }
     cmsIgnoreAttributes,   { pas2js: ignore attributes }
@@ -259,7 +261,7 @@ const
     // cmOBJFPC
     [cmsClass,cmsObjpas,cmsResult,cmsString_pchar,cmsNested_comment,
      cmsRepeat_forward,cmsCvar_support,cmsInitfinal,cmsOut,cmsDefault_para,
-     cmsHintdirective,cmsProperty,cmsDefault_inline,cmsExcept],
+     cmsHintdirective,cmsProperty,cmsDefault_inline,cmsExcept,cmsTypeInquiry],
     // cmMacPas
     [cmsCvar_support,cmsMac_procvar,cmsNestedProcVars,
      cmsNonLocalGoto,cmsISOLike_unary_minus,cmsDefault_inline],
@@ -270,7 +272,7 @@ const
     [cmsTp_procvar,cmsDuplicate_names,cmsNestedProcVars,cmsNonLocalGoto,
      cmsISOLike_unary_minus,cmsISOlike_IO,
      cmsISOLike_Program_Para,
-     cmsISOLike_Mod]
+     cmsISOLike_Mod,cmsTypeInquiry]
     );
   cmAllModesWithGeneric = [cmDELPHI,cmDELPHIUNICODE,cmOBJFPC];
   Pas2jsFixedModeswitches = [cmsArray2dynarray,cmsArrayOperators,
@@ -323,6 +325,8 @@ const
     'ANONYMOUSFUNCTIONS',
     'MULTILINESTRINGS',
     'STATEMENTEXPRESSIONS',
+    'REORDEREDOPERATORS',
+    'TYPEINQUIRY',
     'EXTERNALCLASS',
     'IGNOREATTRIBUTES',
     'OMITRTTI'
@@ -5004,6 +5008,8 @@ var
 begin
   if (CleanStartPos<1) or (CleanStartPos>CleanEndPos)
   or (CleanEndPos>CleanedLen+1) or (UniqueSortedCodeList=nil) then exit;
+  if CleanStartPos>CleanedLen then
+    CleanStartPos:=CleanedLen; // e.g. inserting behind the last parsed char
   LinkIndex:=LinkIndexAtCleanPos(CleanStartPos);
   if LinkIndex<0 then exit;
   ACode:=FLinks[LinkIndex].Code;

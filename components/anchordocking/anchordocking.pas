@@ -488,7 +488,6 @@ type
     procedure StoreConstraints;
     function GetSitePreferredClientSize: TPoint;
     function IsEnabledControl(Control: TControl):Boolean; override;
-    function CanBeDoubleDocked:Boolean; override;
 
     property Site: TWinControl read FSite; // the associated TControl (a TAnchorDockHostSite or a custom dock site)
     property DockSite: TAnchorDockHostSite read FDockSite; // if Site is a TAnchorDockHostSite, this is it
@@ -4735,6 +4734,7 @@ begin
         begin
           dec(NewBounds.Left,NewSite.Width+Splitter.Width);
           MoveAllControls(NewSite.Width+Splitter.Width,0);
+          Splitter.FPercentPosition := -1;
         end;
       alRight:
         inc(NewBounds.Right,NewSite.Width+Splitter.Width);
@@ -4742,6 +4742,7 @@ begin
         begin
           dec(NewBounds.Top,NewSite.Height+Splitter.Height);
           MoveAllControls(0,NewSite.Height+Splitter.Height);
+          Splitter.FPercentPosition := -1;
         end;
       alBottom:
         inc(NewBounds.Bottom,NewSite.Height+Splitter.Height);
@@ -4759,8 +4760,9 @@ begin
         begin
           i:=NewSite.Width+Splitter.Width;
           dec(NewParentBounds.Left,i);
-          dec(NewBounds.Left,i);
+          inc(NewBounds.Right,i);
           MoveAllControls(i,0);
+          Splitter.FPercentPosition := -1;
         end;
       alRight:
         begin
@@ -4771,9 +4773,10 @@ begin
       alTop:
         begin
           i:=NewSite.Height+Splitter.Height;
-          dec(NewBounds.Top,i);
           dec(NewParentBounds.Top,i);
+          inc(NewBounds.Bottom,i);
           MoveAllControls(0,i);
+          Splitter.FPercentPosition := -1;
         end;
       alBottom:
         begin
@@ -8058,11 +8061,6 @@ end;
 function TAnchorDockManager.IsEnabledControl(Control: TControl):Boolean;
 begin
   Result := (DockMaster <> nil) and DockMaster.IsSite(Control);
-end;
-
-function TAnchorDockManager.CanBeDoubleDocked:Boolean;
-begin
-  Result := False;
 end;
 
 { TAnchorDockSplitter }

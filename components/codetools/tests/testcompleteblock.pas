@@ -43,6 +43,8 @@ type
   published
     procedure TestCompleteBlock_ProgamBeginEnd;
     procedure TestCompleteBlock_ProgamBeginMissingEnd;
+    procedure TestCompleteBlock_ProgamBeginMissingEnd2;
+    procedure TestCompleteBlock_ProgamBeginMissingEnd3;
     procedure TestCompleteBlockClassStart;
     procedure TestCompleteBlockBegin;
     procedure TestCompleteBlockProcBegin; // todo
@@ -57,6 +59,7 @@ type
     procedure TestCompleteBlockIfExpr;
     procedure TestCompleteBlockCaseExpr;
     procedure TestCompleteBlockTryExpr;
+    procedure TestCompleteBlock_TypeOf;
   end;
 
 implementation
@@ -219,6 +222,32 @@ begin
   'program '+DefUnitName+';',
   'begin',
   '  |',
+  'end.'
+  ]));
+end;
+
+procedure TTestCodetoolsCompleteBlock.TestCompleteBlock_ProgamBeginMissingEnd2;
+begin
+  CompleteBlock(LinesToStr([
+  'program '+DefUnitName+';',
+  'begin',
+  '  |']),
+  LinesToStr([
+  'program '+DefUnitName+';',
+  'begin',
+  '  |',
+  'end.'
+  ]));
+end;
+
+procedure TTestCodetoolsCompleteBlock.TestCompleteBlock_ProgamBeginMissingEnd3;
+begin
+  CompleteBlock(LinesToStr([
+  'program '+DefUnitName+';',
+  'begin|']),
+  LinesToStr([
+  'program '+DefUnitName+';',
+  'begin|',
   'end.'
   ]));
 end;
@@ -575,6 +604,24 @@ begin
                +'end.',
                 'begin'+LineEnding
                +'  x:=try a except if c then d else e end;'+LineEnding
+               +'  if a then begin|'+LineEnding
+               +'  end;'+LineEnding
+               +'end.');
+end;
+
+procedure TTestCodetoolsCompleteBlock.TestCompleteBlock_TypeOf;
+begin
+  // type of operator in statements
+  CompleteBlock('{$mode objfpc}'+LineEnding
+               +'begin'+LineEnding
+               +'  x:=SizeOf(type of b);'+LineEnding
+               +'  type of c(i):=7;'+LineEnding
+               +'  if a then begin|'+LineEnding
+               +'end.',
+                '{$mode objfpc}'+LineEnding
+               +'begin'+LineEnding
+               +'  x:=SizeOf(type of b);'+LineEnding
+               +'  type of c(i):=7;'+LineEnding
                +'  if a then begin|'+LineEnding
                +'  end;'+LineEnding
                +'end.');

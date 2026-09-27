@@ -2123,6 +2123,9 @@ var
   X, Y, WX, WY: gint;
   AMask: TGdkModifierType;
   AParentWidget: PGtkWidget;
+  AParentGtk: TGtk3Widget;
+  AEvent: TGdkEvent;
+  P: TPoint;
   {$IFDEF GTK3DEBUGEVENTS}
   R: TRect;
   {$ENDIF}
@@ -2144,6 +2147,24 @@ begin
 
   if Event^.motion.send_event = NO_PROPAGATION_TO_PARENT then
     exit;
+
+  if CanSendLCLMessage and Assigned(LCLObject) and Assigned(LCLObject.Parent) and
+    LCLObject.Parent.HandleAllocated and
+    (LCLObject.Perform(LM_NCHITTEST, 0, 0) = HTTRANSPARENT) then
+  begin
+    AParentGtk := TGtk3Widget(LCLObject.Parent.Handle);
+    P := Point(Round(Event^.motion.x), Round(Event^.motion.y));
+    OffsetMousePos(Event^.motion.x_root, Event^.motion.y_root, @P);
+    P := LCLObject.ClientToParent(P, LCLObject.Parent);
+    AEvent := Event^;
+    AEvent.motion.x := P.X + AParentGtk.getClientOffset.X;
+    AEvent.motion.y := P.Y + AParentGtk.getClientOffset.Y;
+    AEvent.motion.is_hint := 0;
+    AEvent.motion.window := AParentGtk.GetContainerWidget^.window;
+    Result := AParentGtk.GtkEventMouseMove(AParentGtk.Widget, @AEvent);
+    Event^.motion.send_event := NO_PROPAGATION_TO_PARENT;
+    exit;
+  end;
 
   FillChar(Msg{%H-}, SizeOf(Msg), #0);
 
@@ -3031,6 +3052,9 @@ var
   AParentControl: TWinControl;
   AClip: PGtkClipboard;
   AClipText: string;
+  AParentGtk: TGtk3Widget;
+  AEvent: TGdkEvent;
+  P: TPoint;
 
   function CheckWidget: boolean;
   begin
@@ -3046,6 +3070,22 @@ begin
   {$ENDIF}
   if Event^.button.send_event = NO_PROPAGATION_TO_PARENT then
     exit(gtk_true);
+
+  if CanSendLCLMessage and Assigned(LCLObject) and Assigned(LCLObject.Parent) and
+    LCLObject.Parent.HandleAllocated and
+    (LCLObject.Perform(LM_NCHITTEST, 0, 0) = HTTRANSPARENT) then
+  begin
+    AParentGtk := TGtk3Widget(LCLObject.Parent.Handle);
+    P := Point(Round(Event^.button.x), Round(Event^.button.y));
+    OffsetMousePos(Event^.button.x_root, Event^.button.y_root, @P);
+    P := LCLObject.ClientToParent(P, LCLObject.Parent);
+    AEvent := Event^;
+    AEvent.button.x := P.X + AParentGtk.getClientOffset.X;
+    AEvent.button.y := P.Y + AParentGtk.getClientOffset.Y;
+    Result := AParentGtk.GtkEventMouse(AParentGtk.Widget, @AEvent);
+    Event^.button.send_event := NO_PROPAGATION_TO_PARENT;
+    exit(gtk_true);
+  end;
 
   FillChar(Msg{%H-}, SizeOf(Msg), #0);
 
@@ -3395,6 +3435,29 @@ begin
   end;
 end;
 
+procedure Gtk3SetBgCssProvider(ATarget: PGtkWidget; const ACss: String; APriority: guint);
+const
+  LCL_BG_CSS = 'lcl-bg-css';
+var
+  AOld, ANew: PGtkCssProvider;
+begin
+  if ATarget = nil then
+    exit;
+  AOld := PGtkCssProvider(g_object_get_data(PGObject(ATarget), LCL_BG_CSS));
+  if Assigned(AOld) then
+  begin
+    gtk_style_context_remove_provider(gtk_widget_get_style_context(ATarget), PGtkStyleProvider(AOld));
+    g_object_unref(gpointer(AOld));
+    g_object_set_data(PGObject(ATarget), LCL_BG_CSS, nil);
+  end;
+  if ACss = '' then
+    exit;
+  ANew := gtk_css_provider_new;
+  gtk_css_provider_load_from_data(ANew, PChar(ACss), -1, nil);
+  gtk_style_context_add_provider(gtk_widget_get_style_context(ATarget), PGtkStyleProvider(ANew), APriority);
+  g_object_set_data(PGObject(ATarget), LCL_BG_CSS, ANew);
+end;
+
 procedure TGtk3Widget.SetColor(AValue: TColor);
 var
   AColor: TGdkRGBA;
@@ -3416,19 +3479,14 @@ begin
   if [wtEntry, wtSpinEdit] * WidgetType <> [] then
   begin
     if AValue = clDefault then
-      CSSData := 'entry { background-color: initial; background-image: none; }'
+      CSSData := ''
     else
     begin
       RGBA := ColorToRGB(AValue);
       CSSData := Format('entry { background-color: #%.2x%.2x%.2x; background-image: none; }',
                  [Red(RGBA), Green(RGBA), Blue(RGBA)]);
     end;
-    Provider := gtk_css_provider_new();
-    gtk_css_provider_load_from_data(Provider, PChar(CSSData), -1, nil);
-    gtk_style_context_add_provider(gtk_widget_get_style_context(FWidget),
-                                   PGtkStyleProvider(Provider),
-                                   GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-    g_object_unref(Provider);
+    Gtk3SetBgCssProvider(FWidget, CSSData, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
   end else
   if wtMemo in WidgetType then
   begin
@@ -3464,52 +3522,32 @@ begin
   end else
   if (wtComboBox in WidgetType) then
   begin
-    if PGtkComboBox(FWidget)^.has_entry then
+    ATargetWidget := PGtkComboBox(FWidget)^.get_child;
+    if AValue = clDefault then
+      CSSData := ''
+    else
     begin
-      ATargetWidget := PGtkComboBox(FWidget)^.get_child;
-      if AValue = clDefault then
-        CSSData := 'entry { background-color: initial; background-image: none; }'
-      else
-      begin
-        RGBA := ColorToRGB(AValue);
+      RGBA := ColorToRGB(AValue);
+      if PGtkComboBox(FWidget)^.has_entry then
         CSSData := Format('entry { background-color: #%.2x%.2x%.2x; background-image: none; }',
-                   [Red(RGBA), Green(RGBA), Blue(RGBA)]);
-      end;
-    end else
-    begin
-      ATargetWidget := PGtkComboBox(FWidget)^.get_child;
-      if AValue = clDefault then
-        CSSData := 'combobox button.combo cellview { background-color: initial; background-image: none; }'
+                   [Red(RGBA), Green(RGBA), Blue(RGBA)])
       else
-      begin
-        RGBA := ColorToRGB(AValue);
         CSSData := Format('combobox button.combo cellview { background-color: #%.2x%.2x%.2x; background-image: none; }',
                    [Red(RGBA), Green(RGBA), Blue(RGBA)]);
-      end;
     end;
-    Provider := gtk_css_provider_new();
-    gtk_css_provider_load_from_data(Provider, PChar(CSSData), -1, nil);
-    gtk_style_context_add_provider(gtk_widget_get_style_context(ATargetWidget),
-                                   PGtkStyleProvider(Provider),
-                                   GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-    g_object_unref(Provider);
+    Gtk3SetBgCssProvider(ATargetWidget, CSSData, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
   end else
   if wtTrackBar in WidgetType then
   begin
     if AValue = clDefault then
-      CSSData := 'trough { background: initial; }'
+      CSSData := ''
     else
     begin
       RGBA := ColorToRGB(AValue);
       CSSData := Format('trough { background: #%.2x%.2x%.2x; }',
         [Red(RGBA), Green(RGBA), Blue(RGBA)]);
     end;
-    Provider := gtk_css_provider_new();
-    gtk_css_provider_load_from_data(Provider, PChar(CSSData), -1, nil);
-    gtk_style_context_add_provider(gtk_widget_get_style_context(FWidget),
-                                   PGtkStyleProvider(Provider),
-                                   GTK_STYLE_PROVIDER_PRIORITY_USER);
-    g_object_unref(Provider);
+    Gtk3SetBgCssProvider(FWidget, CSSData, GTK_STYLE_PROVIDER_PRIORITY_USER);
   end else
   if Self is TGtk3CheckBox then
   begin
@@ -14233,7 +14271,10 @@ begin
   Alloc.y := ATop;
   Alloc.width := AWidth;
   Alloc.height := AHeight;
-  Widget^.set_allocation(@Alloc);
+  // gtk only accepts allocations of visible widgets
+  if Widget^.get_visible then
+    Widget^.set_allocation(@Alloc);
+  Widget^.set_size_request(AWidth, AHeight);
   Move(ALeft, ATop);
 end;
 
@@ -15130,6 +15171,7 @@ var
   msk: TGdkWindowState;
   MenuH: gint;
   AMainForm: Boolean;
+  AContentW, AContentH: gint;
 begin
   Result := False;
   FillChar(Msg{%H-}, SizeOf(Msg), #0);
@@ -15203,8 +15245,18 @@ begin
      (not (TGtk3Window(AData).LCLObject is TCustomForm) or
       (TCustomForm(TGtk3Window(AData).LCLObject).FormStyle <> fsMDIChild)) then
     MenuH := TGtk3Window(AData).GetMenuBarHeight;
-  Msg.Width := Word(AWidget^.window^.get_width);
-  Msg.Height := Word(Max(0, AWidget^.window^.get_height - MenuH));
+  if Gtk3WidgetSet.IsWayland and Gtk3IsGtkWindow(AWidget) then
+  begin
+    AContentW := 0;
+    AContentH := 0;
+    PGtkWindow(AWidget)^.get_size(@AContentW, @AContentH);
+    Msg.Width := Word(AContentW);
+    Msg.Height := Word(Max(0, AContentH - MenuH));
+  end else
+  begin
+    Msg.Width := Word(AWidget^.window^.get_width);
+    Msg.Height := Word(Max(0, AWidget^.window^.get_height - MenuH));
+  end;
   {$IFDEF GTK3DEBUGWINDOWSTATE}
   DebugLn('GetWindowState SizeType=',dbgs(Msg.SizeType),' realized ',dbgs(AWidget^.get_realized));
   {$ENDIF}
@@ -15624,6 +15676,13 @@ var
 begin
   if Gtk3IsGtkWindow(aWidget) then
   begin
+    if Gtk3WidgetSet.IsWayland and
+      (TGtk3Window(aData).GetWindowState * [GDK_WINDOW_STATE_MAXIMIZED,
+        GDK_WINDOW_STATE_FULLSCREEN, GDK_WINDOW_STATE_TILED] <> []) then
+    begin
+      Result := gtk_false;
+      exit;
+    end;
     MoveMsg.Result := 0;
     MoveMsg.Msg := LM_MOVE;
     MoveMsg.MoveType := Move_SourceIsInterface;
@@ -16386,6 +16445,7 @@ var
   x, y: gint;
   WSAInterval: Int64;
   MenuH: gint;
+  AShadowW, AShadowH: gint;
 begin
   AForm := TCustomForm(LCLObject);
   BeginUpdate;
@@ -16400,6 +16460,15 @@ begin
   ARect.width := AWidth;
   ARect.Height := AHeight;
   AIsWayland := Gtk3WidgetSet.IsWayland;
+  AShadowW := FResizeState.ShadowW;
+  AShadowH := FResizeState.ShadowH;
+  if AIsWayland and Gtk3IsGtkWindow(fWidget) and
+    (GetWindowState * [GDK_WINDOW_STATE_MAXIMIZED, GDK_WINDOW_STATE_FULLSCREEN,
+      GDK_WINDOW_STATE_TILED] <> []) then
+  begin
+    AShadowW := 0;
+    AShadowH := 0;
+  end;
   try
     Widget^.get_allocation(@Alloc);
     {$IF DEFINED(GTK3DEBUGFORMS) OR DEFINED(GTK3DEBUGSIZE)}
@@ -16432,8 +16501,8 @@ begin
       begin
         if AIsWayland and Gtk3IsGtkWindow(fWidget) then
         begin
-          ARect.width := ARect.width + FResizeState.ShadowW;
-          ARect.height := ARect.height + FResizeState.ShadowH;
+          ARect.width := ARect.width + AShadowW;
+          ARect.height := ARect.height + AShadowH;
         end;
         Widget^.size_allocate(@ARect);
       end;
@@ -16444,25 +16513,25 @@ begin
       with Geometry do
       begin
         if not AFixedWidthHeight and (AForm.Constraints.MinWidth > 0) then
-          min_width := AForm.Constraints.MinWidth + FResizeState.ShadowW
+          min_width := AForm.Constraints.MinWidth + AShadowW
         else if AFixedWidthHeight then
           min_width := AForm.Width
         else
           min_width := 1;
         if not AFixedWidthHeight and (AForm.Constraints.MaxWidth > 0) then
-          max_width := AForm.Constraints.MaxWidth + FResizeState.ShadowW
+          max_width := AForm.Constraints.MaxWidth + AShadowW
         else if AFixedWidthHeight then
           max_width := AForm.Width
         else
           max_width := 32767;
         if not AFixedWidthHeight and (AForm.Constraints.MinHeight > 0) then
-          min_height := AForm.Constraints.MinHeight + FResizeState.ShadowH + MenuH
+          min_height := AForm.Constraints.MinHeight + AShadowH + MenuH
         else if AFixedWidthHeight then
           min_height := AForm.Height + MenuH
         else
           min_height := 1;
         if not AFixedWidthHeight and (AForm.Constraints.MaxHeight > 0) then
-          max_height := AForm.Constraints.MaxHeight + FResizeState.ShadowH + MenuH
+          max_height := AForm.Constraints.MaxHeight + AShadowH + MenuH
         else if AFixedWidthHeight then
           max_height := AForm.Height + MenuH
         else

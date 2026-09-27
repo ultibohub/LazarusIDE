@@ -623,6 +623,8 @@ type
     FKnownIdentifierSpecializeParamCnt: integer;
     FKnownIdentSpecializeParamCntValid: boolean;
     FIdentifierGenParamCount: integer; // -1 = derive from IdentifierNode
+    FSpecializedType: string;
+    FSpecializedClass: string;
     procedure ClearFoundProc;
     procedure FreeFoundProc(aFoundProc: PFoundProc; FreeNext: boolean);
     procedure RemoveFoundProcFromList(aFoundProc: PFoundProc);
@@ -690,6 +692,8 @@ type
     function GetHelpers(HelperKind: TFDHelpersListKind; CreateIfNotExists: boolean = false): TFDHelpersList;
     function IdentSpecializeNodeParamCount: integer;
     property KnownIdentifierLength: integer read FKnownIdentifierLength;
+    property SpecializedTypeName: string read FSpecializedType;
+    property SpecializedClassName: string read FSpecializedClass;
   end;
   
   
@@ -799,6 +803,7 @@ type
     FFirstBaseTypeCache: TBaseTypeCache;
     FDependentCodeTools: TAVLTree;// the codetools, that depend on this codetool
     FDependsOnCodeTools: TAVLTree;// the codetools, that this codetool depends on
+    FTypeOfNodesInProgress: TFPList;// list of ctnTypeOf nodes, to detect cycles
     FClearingDependentNodeCaches: boolean;
     FCheckingNodeCacheDependencies: boolean;
     FSourcesChangeStep, FFilesChangeStep: int64;
@@ -882,6 +887,8 @@ type
     function FindEndOfExpression(StartPos: integer): integer; // read all operands and operators
     function ReadOperandTypeAtCursor(Params: TFindDeclarationParams;
       MaxEndPos: integer = -1; AliasType: PFindContext = nil): TExpressionType;
+    function FindExpressionTypeOf_TypeOf(TypeOfNode: TCodeTreeNode;
+      Params: TFindDeclarationParams; AliasType: PFindContext = nil): TExpressionType;
     function FindExpressionTypeOfPredefinedIdentifier(StartPos: integer;
       Params: TFindDeclarationParams; AliasType: PFindContext = nil): TExpressionType;
     function FindExpressionTypeOfConstSet(Node: TCodeTreeNode): TExpressionType;
@@ -4033,7 +4040,7 @@ begin
 
     if Node.Desc = ctnGenericName then
       Node := Node.Parent;
-    if Node.Desc in AllPascalTypes then
+    if Node.Desc in AllPascalTypes-[ctnGenericType] then
       Node := Node.Parent;
     case Node.Desc of
     ctnIdentifier:
@@ -4137,6 +4144,8 @@ begin
             end;
           ctnRecordType:
             Result:=Result+'record';
+          ctnTypeOf:
+            Result += ExtractNode(TypeNode, [phpCommentsToSpace]);
           ctnTypeType:
             begin
               Result:=Result+'type';
@@ -6253,6 +6262,8 @@ var
         end;
         SubParams.AppendGenericParamValues(Params.GenParams);
         Params.GenParams:=SubParams.GenParams;
+        Params.FSpecializedType:=SubParams.FSpecializedType;
+        Params.FSpecializedClass:=SubParams.FSpecializedClass;
         exit;
       end;
 
@@ -6272,7 +6283,7 @@ var
         TestContext.Node:=SubParams.NewNode;
         if (not (TestContext.Node.Desc in [ctnTypeDefinition,ctnGenericType,ctnGenericParameter,ctnSpecializeParam]))
         // TODO: the parser marks ctnSpecializeParam as ctnIdentifier (at least for types like "string"
-        and not ((TestContext.Node.Desc=ctnIdentifier) and (TestContext.Node.Parent<>nil) and (TestContext.Node.Parent.Desc=ctnSpecializeParams))
+        and not ((TestContext.Node.Desc in [ctnIdentifier,ctnTypeOf]) and (TestContext.Node.Parent<>nil) and (TestContext.Node.Parent.Desc=ctnSpecializeParams))
         then
         begin
           // not a type
@@ -6364,6 +6375,7 @@ var
   OldStartFlags: TFindDeclarationFlags;
   NodeStackEntry: PCodeTreeNodeStackEntry;
   Cache: TObject;
+  ExprType: TExpressionType;
 begin
   NewAliasNode := nil;
   {$IFDEF CheckNodeTool}CheckNodeTool(Node);{$ENDIF}
@@ -6596,6 +6608,13 @@ begin
         // a TypeType is for example 'MyInt = type integer;'
         // the context is not the 'type' keyword, but the identifier after it.
         Result.Node:=Result.Node.FirstChild;
+      end else
+      if (Result.Node.Desc=ctnTypeOf) then begin
+        // 'type of operand'
+        ExprType:=FindExpressionTypeOf_TypeOf(Result.Node,Params);
+        if (ExprType.Desc<>xtContext) or (ExprType.Context.Node=nil) then
+          break; // predefined type, see ConvertNodeToExpressionType
+        Result:=ExprType.Context;
       end else
       if (Result.Node.Desc=ctnEnumIdentifier) then begin
         // an enum identifier
@@ -11224,6 +11243,8 @@ var
     IdentNode, Node: TCodeTreeNode;
   begin
     IdentNode:=PointerTypeNode.FirstChild;
+    if (IdentNode=nil) or (IdentNode.Desc=ctnTypeOf) then
+      exit(nil); // e.g. ^type of w
     Node:=PointerTypeNode.Parent.NextBrother;
     while Node<>nil do begin
       if (Node.Desc=ctnTypeDefinition)
@@ -11664,13 +11685,23 @@ var
     debugln(['ResolveIdentifier "',GetAtom(CurAtom),'"']);
     {$ENDIF}
 
-    // check special identifier 'Self'
     IdentFound:=false;
     IsStart:=ExprType.Desc=xtNone;
     IsEnd:=IsIdentifierEndOfVariable;
-    if IsStart then begin
-      // start context
-      if (StartNode.Desc in AllPascalStatements) then begin
+    if IsStart then begin // start context
+      if (SpecializeNode<>nil) then begin
+      // specialized type is known, only first specialization is stored in Params
+        if  (Params.FSpecializedType<>'') then
+          debugln(['ResolveIdentifier: nested specializaton to ', Params.FSpecializedType]) else
+        begin
+          Params.FSpecializedType:=
+            GetIdentifier(PChar(@Src[SpecializeNode.Parent.StartPos]));
+          Params.FSpecializedClass:=ExtractCode(SpecializeNode.FirstChild.StartPos,
+            SpecializeNode.FirstChild.EndPos,[]);
+        end;
+      end
+      else if (StartNode.Desc in AllPascalStatements) then begin
+        // check special identifier 'Self'
         TrueSelf:=false;
         if CompareSrcIdentifiers(CurAtom.StartPos,'SELF') then begin
           // SELF in a method is the object itself
@@ -11732,7 +11763,8 @@ var
         // of this function will be assumed
 
       end else if (StartNode.Parent<>nil)
-          and (StartNode.Parent.Desc=ctnPointerType) and (NextAtomType<>vatPoint) then
+          and (StartNode.Parent.Desc=ctnPointerType) and (NextAtomType<>vatPoint)
+          and (StartNode.Desc<>ctnTypeOf) then
       begin
         Node:=FindPointedTypeBehind(Self,StartNode.Parent);
         if Node<>nil then begin
@@ -12096,8 +12128,9 @@ var
     end else if (ExprType.Context.Node.Desc=ctnEnumIdentifier) and
       (ExprType.Context.Node.Parent.Desc=ctnEnumerationType) then begin
       // enum can have a helper to type so "enum1. " is ok
-    end
-    else begin
+    end  else if Params.GenParams.SpecializeParamsNode<>nil then begin
+      //ok, specialized generics allowed
+    end else begin
       // not allowed
       //debugln(['ResolvePoint ',ExprTypeToString(ExprType)]);
       MoveCursorToCleanPos(CurAtom.StartPos);
@@ -12600,6 +12633,13 @@ begin
     else if (IfLevel>0) and UpAtomIs('THEN') then
     else if (IfLevel>0) and UpAtomIs('ELSE') then
       dec(IfLevel)
+    else if UpAtomIs('TYPE')
+    and (cmsTypeInquiry in Scanner.CompilerModeSwitches) then begin
+      // 'type of' operator
+      ReadNextAtom;
+      if not UpAtomIs('OF') then
+        break;
+    end
     else if AtomIsKeyWord
       and not IsKeyWordInConstAllowed.DoItCaseInsensitive(Src,
                                  CurPos.StartPos,CurPos.EndPos-CurPos.StartPos)
@@ -12711,6 +12751,9 @@ begin
       Result:=Tool.ReadOperandTypeAtCursor(Params,Node.EndPos,CurAliasType);
       Params.Load(OldInput,true);
     end;
+  ctnTypeOf:
+    // for example: var a: type of b;
+    Result:=Tool.FindExpressionTypeOf_TypeOf(Node,Params,CurAliasType);
   ctnProcedureType:
     begin
       // atype = procedure abc();   nil is compatible
@@ -13015,6 +13058,37 @@ var EndPos, SubStartPos: integer;
       ReadNextAtom;
   end;
 
+  procedure Read_TypeOf_Operand;
+  // type of Operand
+  //   type of a.b[1]
+  //   type of b(w)  // typecast
+  //   type of (a+b)
+  var
+    OldFlags: TFindDeclarationFlags;
+  begin
+    ReadNextAtom;
+    if not UpAtomIs('OF') then
+      RaiseExceptionFmt(20260923110000,ctsStrExpectedButAtomFound,['of',GetAtom]);
+    ReadNextAtom;
+    SubStartPos:=CurPos.StartPos;
+    EndPos:=FindEndOfTerm(SubStartPos,true,false);
+    if EndPos>MaxEndPos then
+      EndPos:=MaxEndPos;
+    OldFlags:=Params.Flags;
+    Params.Flags:=(Params.Flags*fdfGlobals)+[fdfFunctionResult];
+    Result:=FindExpressionTypeOfTerm(SubStartPos,EndPos,Params,false,AliasType);
+    Params.Flags:=OldFlags;
+    // the type of a constant, e.g. type of (1+2)
+    case Result.Desc of
+    xtConstOrdInteger: Result.Desc:=xtLongint;
+    xtConstBoolean: Result.Desc:=xtBoolean;
+    xtConstReal: Result.Desc:=xtDouble;
+    xtConstString: Result.Desc:=GetDefaultStringType;
+    end;
+    MoveCursorToCleanPos(EndPos);
+    ReadNextAtom;
+  end;
+
 var
   OldFlags: TFindDeclarationFlags;
   MaybeFuncAtCursor: Boolean;
@@ -13116,6 +13190,8 @@ begin
     ReadCaseExprOperand
   else if UpAtomIs('TRY') then
     ReadTryExprOperand
+  else if UpAtomIs('TYPE') and (cmsTypeInquiry in Scanner.CompilerModeSwitches) then
+    Read_TypeOf_Operand
   else
     RaiseIdentExpected;
 
@@ -13130,6 +13206,43 @@ begin
     DbgOut(' Alias=',FindContextToString(AliasType));
   DebugLn('');
   {$ENDIF}
+end;
+
+function TFindDeclarationTool.FindExpressionTypeOf_TypeOf(
+  TypeOfNode: TCodeTreeNode; Params: TFindDeclarationParams;
+  AliasType: PFindContext): TExpressionType;
+// returns the type of the operand of a 'type of' node
+var
+  OldInput: TFindDeclarationInput;
+  ContextNode: TCodeTreeNode;
+begin
+  {$IFDEF CheckNodeTool}CheckNodeTool(TypeOfNode);{$ENDIF}
+  if FTypeOfNodesInProgress=nil then
+    FTypeOfNodesInProgress:=TFPList.Create;
+  if FTypeOfNodesInProgress.IndexOf(TypeOfNode)>=0 then begin
+    // e.g. 'type TA = type of x; var x: TA;'
+    MoveCursorToNodeStart(TypeOfNode);
+    RaiseException(20260923110001,ctsCircleInDefinitions);
+  end;
+  // search in front of the definition, e.g. skip b in 'var b: type of b;'
+  ContextNode:=TypeOfNode;
+  while (ContextNode.Parent<>nil)
+  and (ContextNode.Parent.Desc in AllPascalTypeParts+[ctnSpecializeParams,ctnSpecializeParam]) do
+    ContextNode:=ContextNode.Parent;
+  if (ContextNode.Parent<>nil)
+  and (ContextNode.Parent.Desc in AllIdentifierDefinitions+[ctnProperty,ctnGlobalProperty]) then
+    ContextNode:=ContextNode.Parent;
+  FTypeOfNodesInProgress.Add(TypeOfNode);
+  Params.Save(OldInput);
+  try
+    Params.ContextNode:=ContextNode;
+    MoveCursorToNodeStart(TypeOfNode);
+    ReadNextAtom;
+    Result:=ReadOperandTypeAtCursor(Params,TypeOfNode.EndPos,AliasType);
+  finally
+    Params.Load(OldInput,true);
+    FTypeOfNodesInProgress.Remove(TypeOfNode);
+  end;
 end;
 
 function TFindDeclarationTool.FindExpressionTypeOfPredefinedIdentifier(
@@ -15145,6 +15258,7 @@ begin
     FreeAndNil(FInterfaceHelperCache[HelperKind]);
   FreeAndNil(FDependsOnCodeTools);
   FreeAndNil(FDependentCodeTools);
+  FreeAndNil(FTypeOfNodesInProgress);
   if FDirectoryCache<>nil then begin
     FDirectoryCache.Release;
     FDirectoryCache:=nil;
@@ -15184,7 +15298,8 @@ begin
     NodeCacheMemManager.DisposeNodeCache(FRootNodeCache);
     FRootNodeCache:=nil;
   end;
-  
+  FreeAndNil(FTypeOfNodesInProgress);
+
   // clear dependent codetools
   ClearDependentNodeCaches;
   ClearDependsOnToolRelationships;
@@ -15692,11 +15807,11 @@ begin
 
   if Result='' then exit;
   if AliasType.Node<>nil then begin
-    ClassNode:=FindClassNode(AliasType.Node);
+    ClassNode:=AliasType.Tool.FindClassNode(AliasType.Node);
     if ClassNode=nil then exit;
-    ExprClassNode:= FindClassNode(Params.StartNode);
+    ExprClassNode:= Params.StartTool.FindClassNode(Params.StartNode);
     if ExprClassNode = ClassNode then exit; // inside a class no full path needed
-    Result:=ExtractClassName(ClassNode, false)+'.'+Result;
+    Result:=AliasType.Tool.ExtractClassName(ClassNode, false)+'.'+Result;
   end else
   if Params.NewNode<>nil then begin
     i:=0;
@@ -16554,8 +16669,7 @@ begin
         case FindContext.Node.Desc of
 
         ctnTypeDefinition:
-          Result:=GetIdentifier(
-                              @FindContext.Tool.Src[FindContext.Node.StartPos]);
+          Result:=GetIdentifier(@FindContext.Tool.Src[FindContext.Node.StartPos]);
 
         ctnVarDefinition,ctnConstDefinition:
           begin
@@ -16970,6 +17084,8 @@ begin
   FKnownIdentifierLength:=0;
   FKnownIdentifierSpecializeParamCnt := -1;
   FKnownIdentSpecializeParamCntValid := false;
+  FSpecializedType:='';
+  FSpecializedClass:='';
 end;
 
 constructor TFindDeclarationParams.Create(Tool: TFindDeclarationTool;
@@ -17440,7 +17556,12 @@ begin
 
     GenParamType := CtxNode.FirstChild;
     for i := 2 to n do if GenParamType <> nil then GenParamType := GenParamType.NextBrother;
-    if GenParamType <> nil then begin
+    if (GenParamType <> nil) and (GenParamType.Desc=ctnTypeOf) then begin
+      // e.g. specialize TBird<type of w>, FindBaseTypeOfNode resolves it
+      NewNode:=GenParamType;
+      NewCodeTool:=CtxTool;
+      Result := True;
+    end else if GenParamType <> nil then begin
       Result:=DoFindIdentifierInContext(CtxTool, CtxNode, CtxTool, GenParamType);
 
       if (not Result) and
