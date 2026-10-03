@@ -142,8 +142,9 @@ type
     procedure RecogniseMethodReferenceType;
 
     procedure RecogniseFileType;
-    procedure RecogniseOptionalSemicolon;
+    function RecogniseOptionalSemicolon: boolean;
     procedure RecogniseOptionalSemicolonBefore(aTokenType: TTokenType);
+    function RecogniseOptionalToken(aTokenType: TTokenType): boolean;
     procedure RecogniseOrdIdent;
     procedure RecogniseOrdinalType;
     procedure RecognisePointerType;
@@ -1349,6 +1350,15 @@ begin
       // should be id
       while true do   //Unit1.Id1.id2
       begin
+        if lcToken.TokenType = ttTypeOf then
+        begin
+          inc(liTokenIndex);
+          if liTokenIndex >= fcTokenList.Count then
+            exit;
+          lcToken:=fcTokenList.SolidToken(liTokenIndex);
+          if lcToken = nil then
+            exit;
+        end;
         if (lcToken.WordType <> wtBuiltInType) and (not IsIdentifierToken(lcToken, idAny)) and (not (lcToken.TokenType in CONST_GENERIC_TOKENS)) then
           break;
         lcToken:=fcTokenList.SolidToken(liTokenIndex+1);
@@ -1357,6 +1367,8 @@ begin
         if lcToken.TokenType=ttDot then
         begin
           inc(liTokenIndex,2);
+          if liTokenIndex >= fcTokenList.Count then
+            exit;
           lcToken := fcTokenList.SolidToken(liTokenIndex);
           if lcToken = nil then
             exit;
@@ -1376,6 +1388,8 @@ begin
         break;
     end;
     inc(liTokenIndex);
+    if liTokenIndex >= fcTokenList.Count then
+      exit;
     lbMustBeCommaOrGreaterThan:=not lbMustBeCommaOrGreaterThan;
   end; // while
 end;
@@ -1397,6 +1411,8 @@ var
       Recognise(ttConst);
       lbHasConst := True;
     end;
+    if fcTokenList.FirstSolidTokenType = ttTypeOf then
+      Recognise(ttTypeOf);
     if lbHasConst = False then //can be a expresion like    h: specialize TNames<[Blaise,Pascal]>;
     begin
       lbisGenericType:=(fcTokenList.FirstSolidTokenType=ttIdentifier) and (fcTokenList.SolidTokenType(2)=ttLessThan); //is generic type
@@ -1841,6 +1857,8 @@ begin
         RecogniseProcedureType;
       ttVariant, ttOleVariant:
         RecogniseVariantType; {VariantTypes}
+      ttTypeOf:
+        RecogniseExpr(True)
       else
         CheckNilInstance(lc2, fcRoot.LastLeaf);
 
@@ -2370,12 +2388,25 @@ begin
 end;
 
 procedure TBuildParseTree.RecogniseFieldDecl;
+var
+  lbOnlyType: boolean;
 begin
   // FieldDecl -> IdentList ':' Type
   PushNode(nFieldDeclaration);
 
-  RecogniseIdentList(False);
-  Recognise(ttColon);
+  lbOnlyType := false;
+  if (fcTokenList.FirstSolidTokenType = ttContains) and (not (fcTokenList.SolidTokenType(2) in [ttComma,ttColon])) then
+  begin
+    Recognise(ttContains);
+    RecogniseOptionalToken(ttAlias);
+    lbOnlyType := (not (fcTokenList.SolidTokenType(2) in [ttComma,ttColon]));
+  end;
+
+  if not lbOnlyType then
+  begin
+    RecogniseIdentList(False);
+    Recognise(ttColon);
+  end;
   RecogniseType;
 
   RecogniseHintDirectives;
@@ -2481,9 +2512,17 @@ begin
   end;
 end;
 
-procedure TBuildParseTree.RecogniseOptionalSemicolon;
+function TBuildParseTree.RecogniseOptionalToken(aTokenType: TTokenType): boolean;
 begin
-  if fcTokenList.FirstSolidTokenType=ttSemicolon then
+  Result := fcTokenList.FirstSolidTokenType = aTokenType;
+  if Result then
+    Recognise(aTokenType);
+end;
+
+function TBuildParseTree.RecogniseOptionalSemicolon: boolean;
+begin
+  Result := fcTokenList.FirstSolidTokenType = ttSemicolon;
+  if Result then
     Recognise(ttSemiColon);
 end;
 
@@ -2680,6 +2719,7 @@ const
 var
   lc: TSourceToken;
   lct: TTokenType;
+  lbOnlyType: boolean;
 
   procedure RecogniseExternal;
   begin
@@ -2706,8 +2746,16 @@ begin
   // [( exppubl | external )] [ hints ]
 
   PushNode(nVarDecl);
+  lbOnlyType := False;
+  if (fcTokenList.FirstSolidTokenType = ttContains) and (not (fcTokenList.SolidTokenType(2) in [ttComma,ttColon])) then
+  begin
+    Recognise(ttContains);
+    RecogniseOptionalToken(ttAlias);
+    lbOnlyType := (not (fcTokenList.SolidTokenType(2) in [ttComma,ttColon]));
+  end;
 
-  RecogniseIdentList(False,aVarType);
+  if not lbOnlyType then
+    RecogniseIdentList(False,aVarType);
   // delphi interfered type   var a=27
   if (aVarType=vtInline) and (fcTokenList.FirstSolidTokenType=ttSemiColon) then
   begin
@@ -2725,7 +2773,8 @@ begin
   end
   else
   begin
-    Recognise(ttColon);
+    if not lbOnlyType then
+      Recognise(ttColon);
     RecogniseType;
   end;
 
@@ -2874,6 +2923,7 @@ begin
   else if lc.TokenType = wPlus then
     Recognise(wPlus);
  }
+
   RecogniseTerm;
   while fcTokenList.FirstSolidTokenType in AddOperators do
   begin
@@ -3000,6 +3050,11 @@ begin
   begin
     Recognise(ttNot);
     RecogniseFactor;
+  end
+  else if lt = ttTypeOf then
+  begin
+    Recognise(ttTypeOf);
+    RecogniseExpr(True);
   end
   else if lt in PossiblyUnarySymbolOperators then
   begin
@@ -3486,6 +3541,8 @@ begin
 }
 
   lt := fcTokenList.FirstSolidTokenType;
+  if lt = ttTypeOf then
+    Recognise(ttTypeOf);
   if lt = ttOpenBracket then
   begin
     RecogniseBracketedStatement;
@@ -5819,6 +5876,8 @@ begin
   }
   else if lc.TokenType = ttOpenBracket then
     RecogniseEnumeratedType
+  else if lc.TokenType = ttTypeOf then
+    RecogniseExpr(True)
   else
   begin
     { type can be prefixed with a unit name, e.g. Classes.TList;
