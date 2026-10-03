@@ -2701,7 +2701,8 @@ begin
         if FFPCMsgFile<>nil then
           FPCMsgFilePool.UnloadFile(FFPCMsgFile);
         FFPCMsgFile:=CurFPCMsgFile;
-      end else
+      end
+      else if CurFPCMsgFile<>nil then
         FPCMsgFilePool.UnloadFile(CurFPCMsgFile);
     end;
     t := IDEMessageFlags.GetMsgIdList(',',cfvHide,FFPCMsgFile);
