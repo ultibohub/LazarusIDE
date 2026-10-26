@@ -416,6 +416,7 @@ resourcestring
   lisMenuResaveFormsWithI18n = 'Resave forms with enabled i18n';
   lisMenuPublishProject = 'Publish Project ...';
   lisPublishProject = 'Publish Project';
+  lisMenuPublishPackage = 'Publish Package ...';
   lisMenuProjectInspector = 'Project Inspector';
   lisProject3 = 'project';
   lisKMRemoveActiveFileFromProject = 'Remove Active File from Project';
@@ -4054,7 +4055,7 @@ resourcestring
   lisProjAddTheUnitNameAlreadyExistsInTheSelection = 'The unit name "%s" '
     +'already exists in the selection%swith file: "%s".';
   lisProjAddNewRequirement = 'New Requirement';
-  lisProjAddNewFPMakeRequirement = 'New FPMake Requirement';
+  lisProjAddNewFPMakeRequirement = 'New FPMake requirement ...';
   lisProjAddEditorFile = 'Add Editor Files';
   lisProjAddPackageName = 'Package Name:';
   lisProjAddPackageType = 'Package Type:';
@@ -4468,7 +4469,7 @@ resourcestring
   lisA2PTheClassNameExistsAlreadyInPackageFile = 'The class name "%s" exists already in'
     +'%sPackage %s'
     +'%sFile: "%s"';
-  lisA2PNewFile = 'New File';
+  lisA2PNewFile = 'New file ...';
   lisA2PAddFiles = 'Add Files';
   lisA2PAncestorType = 'Ancestor type';
   lisA2PShowAll = 'Show all';
@@ -4523,7 +4524,7 @@ resourcestring
   lisPckEditReAddFile = 'Re-Add file';
   lisPESortFiles = 'Sort Files Permanently';
   lisPEFixFilesCase = 'Fix Files Case';
-  lisPEShowMissingFiles = 'Show Missing Files';
+  lisPEShowMissingFiles = 'Show Missing Files ...';
   lisPckEditRemoveDependency = 'Remove dependency';
   lisPckEditMoveDependencyUp = 'Move dependency up';
   lisPckEditMoveDependencyDown = 'Move dependency down';

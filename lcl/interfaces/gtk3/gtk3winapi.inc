@@ -215,13 +215,20 @@ begin
   if FormatID = TClipboardFormat(TGdkAtom.intern('text/plain', true)) then
   begin
     pc:=pclp^.wait_for_text;
-    Stream.Write(pc^,strlen(pc));
+    if pc <> nil then
+    begin
+      Stream.Write(pc^,strlen(pc));
+      g_free(pc);
+    end;
   end
   else
   begin
     data:=pclp^.wait_for_contents(PGdkAtom(FormatID));
     if data <> nil then
+    begin
       Stream.Write(data^.get_data^, data^.get_length);
+      gtk_selection_data_free(data);
+    end;
   end;
   Result:=true;
 end;
@@ -768,10 +775,7 @@ end;
 function TGtk3WidgetSet.CreatePolygonRgn(Points: PPoint; NumPts: Integer;
   FillMode: integer): HRGN;
 begin
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  DebugLn('WARNING: TGtk3WidgetSet.CreatePolygonRgn not implemented ...');
-  {$ENDIF}
-  Result:=inherited CreatePolygonRgn(Points, NumPts, FillMode);
+  Result:=HRGN(TGtk3Region.CreatePolygon(Points,NumPts,FillMode));
 end;
 
 function TGtk3WidgetSet.CreateRectRgn(X1, Y1, X2, Y2: Integer): HRGN;
@@ -1989,7 +1993,10 @@ function TGtk3WidgetSet.ExtTextOut(DC: HDC; X, Y: Integer; Options: Longint;
   Rect: PRect; Str: PChar; Count: Longint; Dx: PInteger): Boolean;
 var
   GtkDC: TGtk3DeviceContext absolute DC;
-  ScrX, CharLen: LongInt;
+  ScrX, ScrY, CharLen: LongInt;
+  Orientation: LongInt;
+  Advance: Int64;
+  CosA, SinA: Double;
   IsVectorSurf: Boolean;
   ClipL, ClipT, ClipR, ClipB, Tmp: Integer;
 begin
@@ -2038,11 +2045,30 @@ begin
       else
       begin
         ScrX := X;
+        ScrY := Y;
+        Orientation := 0;
+        if Assigned(GtkDC.CurrentFont) then
+          Orientation := GtkDC.CurrentFont.LogFont.lfOrientation;
+        Advance := 0;
+        CosA := 1;
+        SinA := 0;
+        if Orientation <> 0 then
+        begin
+          CosA := Cos(Orientation * Pi / 1800);
+          SinA := Sin(Orientation * Pi / 1800);
+        end;
         while Count > 0 do
         begin
           CharLen := UTF8CodepointSize(Str);
-          GtkDC.drawText(ScrX,Y,Str,CharLen, (GtkDC.BkMode=OPAQUE) and Assigned(GtkDC.BgBrush));
-          inc(ScrX, Dx^);
+          GtkDC.drawText(ScrX,ScrY,Str,CharLen, (GtkDC.BkMode=OPAQUE) and Assigned(GtkDC.BgBrush));
+          if Orientation = 0 then
+            inc(ScrX, Dx^)
+          else
+          begin
+            inc(Advance, Dx^);
+            ScrX := X + Round(Advance * CosA);
+            ScrY := Y - Round(Advance * SinA);
+          end;
           inc(Dx);
           inc(Str, CharLen);
           dec(Count, CharLen);
@@ -2236,25 +2262,30 @@ begin
   AWindow := gdk_screen_get_active_window(gdk_screen_get_default);
   if AWindow <> nil then
   begin
-    gdk_window_get_user_data(AWindow,@AWidget);
-    if AWidget <> nil then
-    begin
-      AData := g_object_get_data(AWidget, 'lclwidget');
-      // DebugLn('TGtk3WidgetSet.GetActiveWindow found window from data ...',dbgsName(TGtk3Widget(AData).LCLObject));
-      exit({%H-}HWND(AData));
-    end;
-    for i := 0 to Screen.FormCount - 1 do
-    begin
-      if Screen.Forms[i].HandleAllocated then
+    //gdk_screen_get_active_window returns a new reference !
+    try
+      gdk_window_get_user_data(AWindow,@AWidget);
+      if AWidget <> nil then
       begin
-        Hndl := Screen.Forms[i].Handle;
-        AGtkWin := PGtkWindow(TGtk3Window(Hndl).Widget);
-        if AGtkWin^.get_window = AWindow then
+        AData := g_object_get_data(AWidget, 'lclwidget');
+        // DebugLn('TGtk3WidgetSet.GetActiveWindow found window from data ...',dbgsName(TGtk3Widget(AData).LCLObject));
+        exit({%H-}HWND(AData));
+      end;
+      for i := 0 to Screen.FormCount - 1 do
+      begin
+        if Screen.Forms[i].HandleAllocated then
         begin
-          AGtkWin^.get_focus;
-          Result := Hndl;
+          Hndl := Screen.Forms[i].Handle;
+          AGtkWin := PGtkWindow(TGtk3Window(Hndl).Widget);
+          if AGtkWin^.get_window = AWindow then
+          begin
+            AGtkWin^.get_focus;
+            Result := Hndl;
+          end;
         end;
       end;
+    finally
+      g_object_unref(PGObject(AWindow));
     end;
   end else
   if IsWayland then
@@ -2645,6 +2676,8 @@ begin
       begin
         pscr := TGdkScreen.get_default;
         Result := round(pscr^.get_resolution);
+        if Result <= 0 then
+          Result := 96;
       end;
     end;
   end;
@@ -2898,9 +2931,9 @@ var
   display: PGdkDisplay;
   seat: PGdkSeat;
   device: PGdkDevice;
-  x: gdouble;
   window: PGdkWindow;
   windowWidget: PGtkWindow;
+  AUnrefWindow: Boolean;
 begin
   Result := 0;
 
@@ -2925,16 +2958,28 @@ begin
     device := gdk_seat_get_pointer(seat);
     if device = nil then
       exit;
-    window := gdk_screen_get_active_window(gdk_screen_get_default);
-    if window = nil then // gdk_screen_get_active_window may not be implemented
+
+    window := nil;
+    AUnrefWindow := False;
+    //gdk_screen_get_active_window is X11 only and returns a new reference !
+    if not IsWayland then
+    begin
+      window := gdk_screen_get_active_window(gdk_screen_get_default);
+      AUnrefWindow := window <> nil;
+    end;
+    if window = nil then
     begin
       windowWidget := GetActiveGtkWindow;
       if windowWidget <> nil then
-        window := windowWidget^.window;
+        window := gtk_widget_get_window(PGtkWidget(windowWidget));
     end;
     if window = nil then
+      window := gdk_device_get_window_at_position(device, nil, nil);
+    if window = nil then
       Exit;
-    device^.get_state(window, @x, @AModifiers);
+    gdk_device_get_state(device, window, nil, @AModifiers);
+    if AUnrefWindow then
+      g_object_unref(PGObject(window));
   end else
   begin
     AKeyMap := gdk_keymap_get_for_display(display);

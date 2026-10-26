@@ -67,6 +67,7 @@ type
       Chooser: PGtkFileChooser); virtual;
   published
     class function CreateHandle(const ACommonDialog: TCommonDialog): TLCLHandle; override;
+    class procedure DestroyHandle(const ACommonDialog: TCommonDialog); override;
   end;
 
   { TGtk3WSSaveDialog }
@@ -113,6 +114,8 @@ uses gtk3procs;
   { file dialog }
 
 type
+  TWinControlAccess = class(TWinControl);
+
   PFileSelHistoryEntry = ^TFileSelHistoryEntry;
   TFileSelHistoryEntry = record
       Filename: PChar;
@@ -721,6 +724,7 @@ var
   // filedialog
   rowNum   : gint;
   fileInfo : PGChar;
+  pch : PGChar;
 
   fileList : PGSList;
   FontDesc: PPangoFontDescription;
@@ -768,7 +772,9 @@ begin
 
   if theDialog is TFileDialog then
   begin
-    FileName := gtk_file_chooser_get_filename(PGtkFileChooser(FPointer));
+    pch := gtk_file_chooser_get_filename(PGtkFileChooser(FPointer));
+    FileName := pch;
+    g_free(pch);
 
     if theDialog is TOpenDialog then
     begin
@@ -798,14 +804,18 @@ begin
           begin
             CurFilename:=DirName+fileInfo;
             Result:=CheckOpenedFilename(CurFilename);
-            if not Result then exit;
+            if not Result then
+            begin
+              g_slist_free_full(FileList, TGDestroyNotify(@g_free));
+              exit;
+            end;
             Files.Add(CurFilename);
           end;
           // inc(FileList);
           inc(rowNum);
         end;
         // Dec(FileList, rowNum);
-        g_slist_free(FileList);
+        g_slist_free_full(FileList, TGDestroyNotify(@g_free));
         // g_strfreev(fileList);
       end
       else
@@ -836,7 +846,9 @@ begin
   if theDialog is TFontDialog then
   begin
     //DebugLn('Trace:Pressed OK in FontDialog');
-    FontName := gtk_font_chooser_get_font(PGtkFontChooser(FPointer));
+    pch := gtk_font_chooser_get_font(PGtkFontChooser(FPointer));
+    FontName := pch;
+    g_free(pch);
     // FontName := gtk_font_selection_dialog_get_font_name(
     //                                         pgtkfontselectiondialog(FPointer));
     //DebugLn('gtkDialogOKclickedCB FontName=',FontName);
@@ -1249,7 +1261,6 @@ begin
     SubWin := TWinControl(Win.Controls[0]);    // image
     AHnd1:=TGtk3Widget(Win.Handle);
     SubWidget:=AHnd1.Widget;
-    AHnd1.SetParent(Ahnd,0,0);
     gtk_widget_set_size_request({%H-}SubWidget, AControl.Width, AControl.Height);
     SubWin.width := AControl.Width-4;          // skip borders
     SubWin.height := AControl.Height-15;       //
@@ -1257,6 +1268,23 @@ begin
 
   gtk_file_chooser_set_preview_widget(Chooser, PreviewWidget);
   gtk_widget_show(PreviewWidget);
+end;
+
+class procedure TGtk3WSOpenDialog.DestroyHandle(const ACommonDialog: TCommonDialog);
+var
+  AControl: TPreviewFileControl;
+begin
+  // the preview widget is a child of the GtkFileChooserDialog and gets destroyed
+  // with it -> destroy the LCL handles of the preview control first, otherwise
+  // they keep dangling pointers to the freed gtk widgets
+  if ACommonDialog.HandleAllocated and (ACommonDialog is TPreviewFileDialog) then
+  begin
+    AControl := TPreviewFileDialog(ACommonDialog).PreviewFileControl;
+    if (AControl <> nil) and AControl.HandleAllocated then
+      TWinControlAccess(AControl).DestroyHandle;
+  end;
+  // TGtk3WSOpenDialog does not descend from TGtk3WSCommonDialog
+  TGtk3WSCommonDialog.DestroyHandle(ACommonDialog);
 end;
 
 class function TGtk3WSOpenDialog.CreateHandle(const ACommonDialog: TCommonDialog): TLCLHandle;

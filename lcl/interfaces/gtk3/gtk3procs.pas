@@ -193,6 +193,8 @@ const
   GTK3_LEFT_BUTTON = 1;
   GTK3_MIDDLE_BUTTON = 2;
   GTK3_RIGHT_BUTTON = 3;
+  GTK3_BACK_BUTTON = 8;
+  GTK3_FORWARD_BUTTON = 9;
 
   G_TYPE_FUNDAMENTAL_SHIFT = 2;
   G_TYPE_FUNDAMENTAL_MAX = 255 shl G_TYPE_FUNDAMENTAL_SHIFT;
@@ -614,11 +616,10 @@ begin
       for j := 0 to num_faces - 1 do
       begin
         desc := faces[j]^.describe;
-        if desc^.get_style = PANGO_STYLE_ITALIC then
-        begin
-          Result := True;
+        Result := desc^.get_style = PANGO_STYLE_ITALIC;
+        pango_font_description_free(desc);
+        if Result then
           Break;
-        end;
       end;
       g_free(faces);
     end;
@@ -1232,6 +1233,19 @@ begin
         VKey := Gtk3FindVKeyForKeySym(KeyVals[m]);
         if VKey <> VK_UNKNOWN then Break;
       end;
+
+      if VKey = VK_UNKNOWN then
+        for m := 0 to KeySymCount - 1 do
+        begin
+          if KeyVals[m] = 0 then
+            continue;
+          if KeymapKeys[m].level <> 1 then
+            continue;
+          VKey := Gtk3FindVKeyForKeySym(KeyVals[m]);
+          if (VKey <> VK_UNKNOWN) and not VKeyInUse(VKey) then
+            break;
+          VKey := VK_UNKNOWN;
+        end;
 
       //no known VK: assign a free OEM slot unless it is a numpad/modifier keysym
       //that the fallback GdkKeyToLCLKey handles correctly via the keyval.
