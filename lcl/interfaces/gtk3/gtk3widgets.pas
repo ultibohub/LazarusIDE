@@ -111,6 +111,9 @@ type
     FOwner: PGtkWidget;
     FProps: TStringList;
     FPostMessages: TThreadList;
+    FSmoothScrollNative: Boolean; {last smooth scroll was not handled by LCL, let gtk scroll}
+    FSmoothScrollX: Double;
+    FSmoothScrollY: Double;
     FWidgetMapped: boolean;
     FWidgetRGBA: array [0{GTK_STATE_NORMAL}..4{GTK_STATE_INSENSITIVE}] of TDefaultRGBA;
     function CanSendLCLMessage: Boolean;
@@ -612,6 +615,7 @@ type
     procedure SetCaption(const AValue: string);
   strict private
     class procedure MenuItemActivated(AItem:PGtkMenuItem;AData:GPointer); cdecl; static;
+    class procedure MenuItemToggled(AItem:PGtkCheckMenuItem;AData:GPointer); cdecl; static;
     class procedure MenuItemSelect(AItem:PGtkMenuItem;AData:GPointer); cdecl; static;
     class procedure MenuItemDeselect(AItem:PGtkMenuItem;AData:GPointer); cdecl; static;
     class function MenuItemEvent(AWidget:PGtkWidget;event:PGdkEvent; data:GPointer):gboolean; cdecl; static;
@@ -742,6 +746,7 @@ type
     function GetIndexAtXY(const X, Y: integer): integer;
     function GetItemSelected(const AIndex: Integer): Boolean;
     function GetScrollWidth: integer;
+    procedure SetScrollWidth(const AValue: integer);
     procedure SelectItem(const AIndex: Integer; ASelected: Boolean);
     procedure SetTopIndex(const AIndex: Integer);
     property ItemIndex: Integer read GetItemIndex write SetItemIndex;
@@ -1825,6 +1830,9 @@ var
   MappedXY: TPoint;
   MessE : TLMMouseEvent;
   aDir: TGdkScrollDirection;
+  IsStop: Boolean;
+  Steps: Integer;
+  W: TGtk3Widget;
 begin
   Result := False;
   if AWidget=nil then ;
@@ -1855,31 +1863,31 @@ begin
     GDK_SCROLL_DOWN, GDK_SCROLL_LEFT {1}: MessE.WheelDelta := -120;
     GDK_SCROLL_SMOOTH:
       begin
-        if AEvent^.scroll.delta_y <> 0 then
+        //touchpads send many small deltas, 1.0 is one wheel notch.
+        //accumulate and send one LM_MOUSEWHEEL per whole notch. issue #42676
+        W := TGtk3Widget(AData);
+        IsStop := gdk_event_is_scroll_stop_event(AEvent);
+        if IsStop then
         begin
-          if AEvent^.scroll.delta_y > 0 then
-            MessE.WheelDelta := -120
-          else
-            MessE.WheelDelta := 120;
-          //TODO: find in settings default wheel scroll distance
-          //MessE.WheelDelta := -Round((120 * AEvent^.scroll.delta_y) / 10);
+          W.FSmoothScrollX := 0;
+          W.FSmoothScrollY := 0;
         end;
-        if AEvent^.scroll.delta_x <> 0 then
-        begin
-          if AEvent^.scroll.delta_x > 0 then
-            MessE.WheelDelta := -120
-          else
-            MessE.WheelDelta := 120;
-        end;
-        if (AEvent^.scroll.delta_x=0) and (AEvent^.scroll.delta_y=0) then
-        begin
-          // the initial wheel smooth scroll has no delta
-          MessE.WheelDelta := -120;
-          // gdk_event_get_scroll_direction does not help here
-        end;
-
-        if MessE.WheelDelta=0 then
+        Result := not W.FSmoothScrollNative;
+        if IsStop or ((AEvent^.scroll.delta_x = 0) and (AEvent^.scroll.delta_y = 0)) then
           exit;
+        W.FSmoothScrollX := W.FSmoothScrollX + AEvent^.scroll.delta_x;
+        W.FSmoothScrollY := W.FSmoothScrollY + AEvent^.scroll.delta_y;
+        Steps := Trunc(W.FSmoothScrollY);
+        if Steps <> 0 then
+          W.FSmoothScrollY := W.FSmoothScrollY - Steps
+        else
+        begin
+          Steps := Trunc(W.FSmoothScrollX);
+          if Steps = 0 then
+            exit;
+          W.FSmoothScrollX := W.FSmoothScrollX - Steps;
+        end;
+        MessE.WheelDelta := -120 * Steps;
       end;
   else
     DebugLn('WARNING: ',dbgsName(aWinControl),' unhandled scrollDirection event ',dbgs(Ord(AEvent^.scroll.direction)));
@@ -1894,6 +1902,8 @@ begin
 
   NotifyApplicationUserInput(AWinControl, PLMessage(@MessE)^);
   Result := TGtk3Widget(AData).DeliverMessage(MessE) <> 0;
+  if AEvent^.scroll.direction = GDK_SCROLL_SMOOTH then
+    TGtk3Widget(AData).FSmoothScrollNative := not Result;
   AEvent^.scroll.send_event := NO_PROPAGATION_TO_PARENT;
 
   //DebugLn('Gtk3ScrollEvent for ', dbgsName(TGtk3Widget(AData).LCLObject),' Result ',dbgs(Result));
@@ -3052,6 +3062,7 @@ var
   AParentControl: TWinControl;
   AClip: PGtkClipboard;
   AClipText: string;
+  AClipPChar: Pgchar;
   AParentGtk: TGtk3Widget;
   AEvent: TGdkEvent;
   P: TPoint;
@@ -3120,6 +3131,18 @@ begin
         begin
           Msg.Msg := LM_MBUTTONDOWN;
           Msg.Keys := Msg.Keys or MK_MBUTTON;
+        end
+        else
+        if MButton = GTK3_BACK_BUTTON then
+        begin
+          Msg.Msg := LM_XBUTTONDOWN;
+          Msg.Keys := Msg.Keys or MK_XBUTTON1;
+        end
+        else
+        if MButton = GTK3_FORWARD_BUTTON then
+        begin
+          Msg.Msg := LM_XBUTTONDOWN;
+          Msg.Keys := Msg.Keys or MK_XBUTTON2;
         end;
       end;
     GDK_2BUTTON_PRESS: //-> double click GDK_DOUBLE_BUTTON_PRESS
@@ -3140,6 +3163,18 @@ begin
         begin
           Msg.Msg := LM_MBUTTONDBLCLK;
           Msg.Keys := Msg.Keys or MK_MBUTTON;
+        end
+        else
+        if MButton = GTK3_BACK_BUTTON then
+        begin
+          Msg.Msg := LM_XBUTTONDBLCLK;
+          Msg.Keys := Msg.Keys or MK_XBUTTON1;
+        end
+        else
+        if MButton = GTK3_FORWARD_BUTTON then
+        begin
+          Msg.Msg := LM_XBUTTONDBLCLK;
+          Msg.Keys := Msg.Keys or MK_XBUTTON2;
         end;
       end;
     GDK_3BUTTON_PRESS:
@@ -3160,6 +3195,18 @@ begin
         begin
           Msg.Msg := LM_MBUTTONDOWN;
           Msg.Keys := Msg.Keys or MK_MBUTTON;
+        end
+        else
+        if MButton = GTK3_BACK_BUTTON then
+        begin
+          Msg.Msg := LM_XBUTTONDOWN;
+          Msg.Keys := Msg.Keys or MK_XBUTTON1;
+        end
+        else
+        if MButton = GTK3_FORWARD_BUTTON then
+        begin
+          Msg.Msg := LM_XBUTTONDOWN;
+          Msg.Keys := Msg.Keys or MK_XBUTTON2;
         end;
       end;
     GDK_BUTTON_RELEASE:
@@ -3180,6 +3227,18 @@ begin
         begin
           Msg.Msg := LM_MBUTTONUP;
           Msg.Keys := Msg.Keys and not MK_MBUTTON;
+        end
+        else
+        if MButton = GTK3_BACK_BUTTON then
+        begin
+          Msg.Msg := LM_XBUTTONUP;
+          Msg.Keys := Msg.Keys or MK_XBUTTON1;
+        end
+        else
+        if MButton = GTK3_FORWARD_BUTTON then
+        begin
+          Msg.Msg := LM_XBUTTONUP;
+          Msg.Keys := Msg.Keys or MK_XBUTTON2;
         end;
       end;
     else
@@ -3200,8 +3259,11 @@ begin
     AClipText := '';
     AClip := gtk_clipboard_get(gdk_atom_intern('PRIMARY', False));
     if (AClip <> nil) and gtk_clipboard_wait_is_text_available(AClip) then
-      AClipText := gtk_clipboard_wait_for_text(AClip)
-    else
+    begin
+      AClipPChar := gtk_clipboard_wait_for_text(AClip);
+      AClipText := AClipPChar;
+      g_free(AClipPChar);
+    end else
       AClip := nil;
     LCLIntf.SetFocus(LCLObject.Handle);
     if AClip <> nil then
@@ -5066,8 +5128,9 @@ begin
     gdk_display_flush(gdk_window_get_display(Win));
   end;
   //process only small amount of events, so our repaint triggers on time.
-  while g_main_context_iteration(g_main_context_default(), False) do
-    break;
+  if not (Assigned(DragManager) and DragManager.IsDragging) then
+    while g_main_context_iteration(g_main_context_default(), False) do
+      break;
 end;
 
 procedure TGtk3Widget.SetCursor(ACursor: HCURSOR);
@@ -10144,9 +10207,32 @@ begin
     Exit;
   inc(GtkItem.Lock);
   try
-    FillChar(Msg{%H-}, SizeOf(Msg), #0);
-    Msg.Msg := LM_ACTIVATE;
-    GtkItem.MenuItem.Dispatch(Msg);
+    try
+      FillChar(Msg{%H-}, SizeOf(Msg), #0);
+      Msg.Msg := LM_ACTIVATE;
+      GtkItem.MenuItem.Dispatch(Msg);
+    except
+      Application.HandleException(nil);
+    end;
+  finally
+    dec(GtkItem.Lock);
+  end;
+end;
+
+class procedure TGtk3MenuItem.MenuItemToggled(AItem: PGtkCheckMenuItem; AData: GPointer); cdecl;
+var
+  GtkItem: TGtk3MenuItem;
+begin
+  GtkItem := TGtk3MenuItem(AData);
+  if not Assigned(GtkItem) or not Assigned(GtkItem.MenuItem) or (GtkItem.Lock > 0) then
+    Exit;
+  if GtkItem.MenuItem.AutoCheck or Gtk3IsRadioMenuItem(PGObject(AItem)) then
+    Exit;
+  if AItem^.active = GtkItem.MenuItem.Checked then
+    Exit;
+  inc(GtkItem.Lock);
+  try
+    AItem^.active := GtkItem.MenuItem.Checked;
   finally
     dec(GtkItem.Lock);
   end;
@@ -10239,6 +10325,8 @@ begin
   g_signal_connect_data(FWidget, 'destroy', TGCallback(@DestroyWidgetEvent), Self, nil, G_CONNECT_DEFAULT);
   g_signal_connect_data(FWidget, 'event', TGCallback(@MenuItemEvent), Self, nil, G_CONNECT_DEFAULT);
   g_signal_connect_data(FWidget, 'activate', TGCallback(@MenuItemActivated), Self, nil, G_CONNECT_DEFAULT);
+  if Gtk3WidgetIsA(FWidget, gtk_check_menu_item_get_type) then
+    g_signal_connect_data(FWidget, 'toggled', TGCallback(@MenuItemToggled), Self, nil, [G_CONNECT_AFTER]);
   g_signal_connect_data(FWidget, 'select', TGCallback(@MenuItemSelect), Self, nil, G_CONNECT_DEFAULT);
   g_signal_connect_data(FWidget, 'deselect', TGCallback(@MenuItemDeselect), Self, nil, G_CONNECT_DEFAULT);
 
@@ -10335,6 +10423,7 @@ begin
   if OldSubmenu <> nil then
   begin
     PGtkMenuItem(FWidget)^.set_submenu(PGtkMenu(OldSubmenu));
+    g_object_set_data(PGObject(FWidget), 'ContainerMenu', OldSubmenu);
     g_object_unref(PGObject(OldSubmenu));
   end;
 
@@ -11580,7 +11669,7 @@ begin
 
   PGtkScrolledWindow(Result)^.get_vscrollbar^.set_can_focus(False);
   PGtkScrolledWindow(Result)^.get_hscrollbar^.set_can_focus(False);
-  PGtkScrolledWindow(Result)^.set_policy(GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
+  PGtkScrolledWindow(Result)^.set_policy(GTK_POLICY_EXTERNAL, GTK_POLICY_AUTOMATIC);
 
   FListBoxStyle := AListBox.Style;
   if FListBoxStyle <> lbOwnerDrawVariable then
@@ -11650,6 +11739,7 @@ begin
         if not Selection^.path_is_selected(Path) then
           Result := -1;
       end;
+      gtk_tree_path_free(Path);
     end;
   end;
 end;
@@ -11759,7 +11849,8 @@ var
   AModel: PGtkTreeModel;
   Iter: TGtkTreeIter;
   AGdkRect: TGdkRectangle;
-  ACol: TGtkTreeViewColumn;
+  ACol: PGtkTreeViewColumn;
+  APath: PGtkTreePath;
 begin
   Result := Rect(0, 0, 0, 0);
   AModel := PGtkTreeView(getContainerWidget)^.model;
@@ -11767,8 +11858,10 @@ begin
     exit;
   if AModel^.iter_nth_child(@Iter, nil, AIndex) then
   begin
-    ACol := gtk_tree_view_get_column(PGtkTreeView(getContainerWidget), 0)^;
-    gtk_tree_view_get_cell_area(PGtkTreeView(getContainerWidget), AModel^.get_path(@Iter), @ACol, @AGdkRect);
+    ACol := gtk_tree_view_get_column(PGtkTreeView(getContainerWidget), 0);
+    APath := AModel^.get_path(@Iter);
+    gtk_tree_view_get_cell_area(PGtkTreeView(getContainerWidget), APath, ACol, @AGdkRect);
+    gtk_tree_path_free(APath);
     Result := RectFromGdkRect(AGdkRect);
   end;
 end;
@@ -11819,6 +11912,26 @@ end;
 function TGtk3ListBox.GetScrollWidth: integer;
 begin
   Result := Round(getHorizontalScrollbar^.get_adjustment^.get_upper);
+end;
+
+procedure TGtk3ListBox.SetScrollWidth(const AValue: integer);
+var
+  AColumn: PGtkTreeViewColumn;
+begin
+  if not IsWidgetOk then
+    exit;
+  AColumn := gtk_tree_view_get_column(PGtkTreeView(GetContainerWidget), 0);
+  if AValue > Widget^.get_allocated_width then
+  begin
+    if Assigned(AColumn) then
+      gtk_tree_view_column_set_min_width(AColumn, AValue);
+    HScrollBarPolicy := GTK_POLICY_AUTOMATIC;
+  end else
+  begin
+    if Assigned(AColumn) then
+      gtk_tree_view_column_set_min_width(AColumn, -1);
+    HScrollBarPolicy := GTK_POLICY_EXTERNAL;
+  end;
 end;
 
 procedure TGtk3ListBox.SelectItem(const AIndex: Integer; ASelected: Boolean);
@@ -12401,49 +12514,54 @@ var
 begin
   fillchar(gv{%H-},sizeof(gv),0);
   gv.init(G_TYPE_OBJECT);
-  gv.set_instance(nil);
-  PGtkCellRendererPixbuf(cell)^.set_property('pixbuf',@gv);
+  try
+    gv.set_instance(nil);
+    PGtkCellRendererPixbuf(cell)^.set_property('pixbuf',@gv);
 
-  gtk_tree_model_get(tree_model, iter, [0, @ListItem, -1]);
+    gtk_tree_model_get(tree_model, iter, [0, @ListItem, -1]);
 
-  ListColumn := TListColumn(g_object_get_data(tree_column, 'TListColumn'));
-  if ListColumn = nil then
-    Exit;
-  ColumnIndex := ListColumn.Index;
-  AImages := TGtk3ListView(AData).Images;
-  if AImages = nil then
-    Exit;
-  ImageIndex := -1;
+    ListColumn := TListColumn(g_object_get_data(tree_column, 'TListColumn'));
+    if ListColumn = nil then
+      Exit;
+    ColumnIndex := ListColumn.Index;
+    AImages := TGtk3ListView(AData).Images;
+    if AImages = nil then
+      Exit;
+    ImageIndex := -1;
 
-  if (ListItem = nil) and TCustomListView(TGtk3Widget(AData).LCLObject).OwnerData then
-  begin
-    APath := gtk_tree_model_get_path(tree_model,iter);
-    ListItem := TCustomListView(TGtk3Widget(AData).LCLObject).Items[gtk_tree_path_get_indices(APath)^];
-    gtk_tree_path_free(APath);
+    if (ListItem = nil) and TCustomListView(TGtk3Widget(AData).LCLObject).OwnerData then
+    begin
+      APath := gtk_tree_model_get_path(tree_model,iter);
+      ListItem := TCustomListView(TGtk3Widget(AData).LCLObject).Items[gtk_tree_path_get_indices(APath)^];
+      gtk_tree_path_free(APath);
+    end;
+
+    if ListItem = nil then
+      Exit;
+
+    if ColumnIndex = 0 then
+      ImageIndex := ListItem.ImageIndex
+    else
+      if ColumnIndex - 1 <= ListItem.SubItems.Count - 1 then
+        ImageIndex := ListItem.SubItemImages[ColumnIndex - 1];
+
+    if ImageIndex > AImages.Count - 1 then
+      TGtk3ListView(AData).SyncImages;
+
+    if (ImageIndex > -1) and (ImageIndex <= AImages.Count-1) then
+      pb := PGdkPixbuf(AImages.Items[ImageIndex])^.copy
+    else
+      pb := nil;
+
+    gv.set_instance(pb);
+    PGtkCellRendererPixbuf(cell)^.set_property('pixbuf',@gv);
+
+    if Assigned(pb) then
+      g_object_unref(pb);
+  finally
+    // GValue holds its own reference on the pixbuf
+    g_value_unset(@gv);
   end;
-
-  if ListItem = nil then
-    Exit;
-
-  if ColumnIndex = 0 then
-    ImageIndex := ListItem.ImageIndex
-  else
-    if ColumnIndex - 1 <= ListItem.SubItems.Count - 1 then
-      ImageIndex := ListItem.SubItemImages[ColumnIndex - 1];
-
-  if ImageIndex > AImages.Count - 1 then
-    TGtk3ListView(AData).SyncImages;
-
-  if (ImageIndex > -1) and (ImageIndex <= AImages.Count-1) then
-    pb := PGdkPixbuf(AImages.Items[ImageIndex])^.copy
-  else
-    pb := nil;
-
-  gv.set_instance(pb);
-  PGtkCellRendererPixbuf(cell)^.set_property('pixbuf',@gv);
-
-  if Assigned(pb) then
-    g_object_unref(pb);
 end;
 
 class procedure TGtk3ListView.ListViewColumnClicked(column: PGtkTreeViewColumn; AData: GPointer); cdecl;
@@ -16055,6 +16173,9 @@ begin
       if FWidgetType = [wtHintWindow] then
         gtk_window_set_type_hint(PGtkWindow(Result), GDK_WINDOW_TYPE_HINT_TOOLTIP)
       else
+      if Assigned(Application) and (Application.MainForm = AForm) then
+        gtk_window_set_type_hint(PGtkWindow(Result), GDK_WINDOW_TYPE_HINT_NORMAL)
+      else
         gtk_window_set_type_hint(PGtkWindow(Result), GDK_WINDOW_TYPE_HINT_UTILITY);
     end;
     if FWidgetType = [wtHintWindow] then
@@ -17566,22 +17687,27 @@ begin
     fnt:=TFontDialog(CommonDialog).Font;
     pch:=PGtkFontChooser(fWidget);
     pfc:=pch^.get_font_face();
-    pfd:=pfc^.describe;
-    { this stuff is implemened in gtk3objects.Tgtk3Font.UpdateLogFont
-      so this is backward mapping of properties }
+    if pfc <> nil then
+    begin
+      pfd:=pfc^.describe;
+      { this stuff is implemened in gtk3objects.Tgtk3Font.UpdateLogFont
+        so this is backward mapping of properties }
 
-    family := pfd^.get_family();
-    fnt.Name:=AppendPangoFontFaceSuffixes(family, pfd^.get_stretch, pfd^.get_weight);
-    fnt.Size:=pch^.get_font_size() div PANGO_SCALE;
+      family := pfd^.get_family();
+      fnt.Name:=AppendPangoFontFaceSuffixes(family, pfd^.get_stretch, pfd^.get_weight);
+      fnt.Size:=pch^.get_font_size() div PANGO_SCALE;
 
-    fnts:=[];
-    if pfd^.get_weight >= PANGO_WEIGHT_SEMIBOLD then
-     include(fnts,fsBold);
+      fnts:=[];
+      if pfd^.get_weight >= PANGO_WEIGHT_SEMIBOLD then
+       include(fnts,fsBold);
 
-    // do not differentiate oblique and italic
-    if (pfd^.get_style >= PANGO_STYLE_OBLIQUE) then
-      include(fnts,fsItalic);
-    fnt.Style:=fnts;
+      // do not differentiate oblique and italic
+      if (pfd^.get_style >= PANGO_STYLE_OBLIQUE) then
+        include(fnts,fsItalic);
+      fnt.Style:=fnts;
+      // pango_font_face_describe returns a new description (transfer full)
+      pango_font_description_free(pfd);
+    end;
   end;
   Result:=inherited response_handler(resp_id);
 end;

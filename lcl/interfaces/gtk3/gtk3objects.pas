@@ -153,6 +153,7 @@ type
     constructor Create({%H-}CreateHandle: Boolean; X1,Y1,X2,Y2: Integer); virtual; overload;
     constructor Create(X1,Y1,X2,Y2,nW,nH: Integer); virtual; overload;
     constructor CreateEllipse(X1,Y1,X2,Y2: Integer); virtual; overload;
+    constructor CreatePolygon(Points: PPoint; NumPts: Integer; FillMode: integer); virtual; overload;
     function Select(ACtx:TGtk3DeviceContext):TGtk3ContextObject; override;
     function Get(szbuf:integer;pbuf:pointer):integer; override;
     destructor Destroy; override;
@@ -316,6 +317,7 @@ type
     procedure SetCanvasScaleFactor(const AValue: double);
     procedure SetXorMode(var xorSurface: Pcairo_surface_t; AMap: Tcairo_operator_t); // SetRasterOp
     procedure ApplyXorDrawing(xorSurface: Pcairo_surface_t; AMap: Tcairo_operator_t); // after each paint
+    procedure ForgetFont(const AFont: TGtk3Font);
   protected
     FCairo: Pcairo_t;
     FXorCairo: PCairo_t;
@@ -980,6 +982,64 @@ begin
   end;
 end;
 
+constructor TGtk3Region.CreatePolygon(Points: PPoint; NumPts: Integer;
+  FillMode: integer);
+// Like CreateEllipse: the polygon is drawn in the scratch surface's local
+// coordinates, i.e. moved by -MinX,-MinY, and the resulting region is translated back.
+var
+  ASurface: pcairo_surface_t;
+  cr: Pcairo_t;
+  MinX, MinY, MaxX, MaxY, w, h, i: integer;
+begin
+  inherited Create;
+  if (Points=nil) or (NumPts<3) then
+  begin
+    FHandle := cairo_region_create;
+    exit;
+  end;
+  MinX:=Points[0].X;
+  MinY:=Points[0].Y;
+  MaxX:=MinX;
+  MaxY:=MinY;
+  for i:=1 to NumPts-1 do
+  begin
+    MinX:=Min(MinX,Points[i].X);
+    MinY:=Min(MinY,Points[i].Y);
+    MaxX:=Max(MaxX,Points[i].X);
+    MaxY:=Max(MaxY,Points[i].Y);
+  end;
+  w:=MaxX-MinX;
+  h:=MaxY-MinY;
+  if (w<=0) or (h<=0) then
+  begin
+    FHandle := cairo_region_create;
+    exit;
+  end;
+
+  FHandle := nil;
+  ASurface := cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
+  cr:=cairo_create(ASurface);
+  try
+    if FillMode=WINDING then
+      cairo_set_fill_rule(cr,CAIRO_FILL_RULE_WINDING)
+    else
+      cairo_set_fill_rule(cr,CAIRO_FILL_RULE_EVEN_ODD);
+    cairo_new_path(cr);
+    cairo_move_to(cr,Points[0].X-MinX,Points[0].Y-MinY);
+    for i:=1 to NumPts-1 do
+      cairo_line_to(cr,Points[i].X-MinX,Points[i].Y-MinY);
+    cairo_close_path(cr);
+    cairo_set_source_rgba(cr,1,1,1,1);
+    cairo_fill(cr);
+
+    FHandle := gdk_cairo_region_create_from_surface(ASurface);
+    cairo_region_translate(FHandle, MinX, MinY);
+  finally
+    cairo_destroy(cr);
+    cairo_surface_destroy(ASurface);
+  end;
+end;
+
 function TGtk3Region.Select(ACtx: TGtk3DeviceContext): TGtk3ContextObject;
 begin
   fContext:=ACtx;
@@ -1051,6 +1111,7 @@ var
   AFaceStr: string;
   SavedEscapement, SavedOrientation: Longint;
   SavedCharSet: Byte;
+  ADpi: gdouble;
 begin
   if not Assigned(fHandle) then exit;
   SavedEscapement := fLogFont.lfEscapement;
@@ -1108,7 +1169,10 @@ begin
     begin
       { in points }
       //sz:=round(96*sz/PANGO_SCALE/72);//round(2.03*sz/PANGO_SCALE);
-      sz := MulDiv(PANGO_PIXELS(sz), Round(gdk_screen_get_resolution(gdk_screen_get_default)), 72 );
+      ADpi := gdk_screen_get_resolution(gdk_screen_get_default);
+      if ADpi <= 0 then
+        ADpi := 96;
+      sz := MulDiv(PANGO_PIXELS(sz), Round(ADpi), 72 );
     end;
 
     fLogFont.lfHeight:=sz;//round(sz/PANGO_SCALE);
@@ -1338,7 +1402,25 @@ begin
 end;
 
 destructor TGtk3Font.Destroy;
+var
+  AIter: TMapIterator;
+  ADC: TGtk3DeviceContext;
 begin
+  if FDCHandles <> nil then
+  begin
+    AIter := TMapIterator.Create(FDCHandles);
+    try
+      AIter.First;
+      while not AIter.EOM do
+      begin
+        AIter.GetData(ADC);
+        ADC.ForgetFont(Self);
+        AIter.Next;
+      end;
+    finally
+      AIter.Free;
+    end;
+  end;
   if Assigned(fContext) and (fContext.CurrentFont = Self) then
     fContext.CurrentFont := nil;
   if Assigned(FLayout) then
@@ -2952,6 +3034,24 @@ begin
   cairo_get_matrix(FCairo, @Matrix);
   // widget with menu or other non-client exclusions have offset in trasform matrix
   fncOrigin:=Point(round(Matrix.x0),round(Matrix.y0));
+end;
+
+procedure TGtk3DeviceContext.ForgetFont(const AFont: TGtk3Font);
+var
+  i: Integer;
+  AReplacement: TGtk3Font;
+begin
+  if FFont <> AFont then
+    AReplacement := FFont
+  else
+    AReplacement := nil;
+  if FCurrentFont = AFont then
+    FCurrentFont := AReplacement;
+  if Assigned(FSavedStateStack) then
+    for i := 0 to FSavedStateStack.Count - 1 do
+      if (FSavedStateStack[i] <> nil) and
+        (PGtk3DCSavedState(FSavedStateStack[i])^.FontObj = AFont) then
+        PGtk3DCSavedState(FSavedStateStack[i])^.FontObj := AReplacement;
 end;
 
 procedure TGtk3DeviceContext.DeleteObjects;
