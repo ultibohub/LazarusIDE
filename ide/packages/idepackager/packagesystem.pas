@@ -4562,7 +4562,7 @@ function TLazPackageGraph.CompilePackage(APackage: TLazPackage;
     SubTool:=SubToolFPC;
     CodeToolBoss.CompilerDefinesCache.GetPCVersion(CompilerFilename,
       APackage.CompilerOptions.GetEffectiveTargetOS,
-      APackage.CompilerOptions.GetEffectiveTargetCPU,false,Kind);
+      APackage.CompilerOptions.GetEffectiveTargetCPU,'',false,Kind); //Ultibo
     if Kind=pcPas2js then
       SubTool:=SubToolPas2js;
     FPCParser:=TFPCParser(PkgCompileTool.AddParsers(SubTool));
