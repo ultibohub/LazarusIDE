@@ -5542,6 +5542,10 @@ msgstr "Pridať -FcUTF8"
 msgid "May be needed if source files have non-ansistring literals."
 msgstr ""
 
+#: lazarusidestrconsts.lisaddfilesfromfs
+msgid "Add files from disk ..."
+msgstr ""
+
 #: lazarusidestrconsts.lisaddfilter
 msgid "Add Filter ..."
 msgstr ""
@@ -5584,7 +5588,7 @@ msgid "Add new disk files?"
 msgstr ""
 
 #: lazarusidestrconsts.lisaddnewfilesfromfilesystem
-msgid "Add New Files from File System"
+msgid "Add missing files from search paths"
 msgstr ""
 
 #: lazarusidestrconsts.lisaddnewmacro
@@ -9883,11 +9887,6 @@ msgstr "Exportovať všetko"
 msgid "Export All Items to File"
 msgstr "Exportovať všetky položky do súboru"
 
-#: lazarusidestrconsts.lisexportenvironmentoptions
-msgctxt "lazarusidestrconsts.lisexportenvironmentoptions"
-msgid "Export environment options"
-msgstr ""
-
 #: lazarusidestrconsts.lisexporthtml
 #, fuzzy
 #| msgid "Export as HTML"
@@ -10916,11 +10915,6 @@ msgstr "Importovať"
 msgctxt "lazarusidestrconsts.lisimportant"
 msgid "Important"
 msgstr ""
-
-#: lazarusidestrconsts.lisimportenvironmentoptions
-msgctxt "lazarusidestrconsts.lisimportenvironmentoptions"
-msgid "Import environment options"
-msgstr "Importovať voľby prostredia"
 
 #: lazarusidestrconsts.lisimportfromfile
 msgid "Import from File"
@@ -14756,10 +14750,6 @@ msgstr ""
 #: lazarusidestrconsts.lispckdisablei18noflfm
 msgid "Disable I18N of lfm"
 msgstr ""
-
-#: lazarusidestrconsts.lispckeditaddfilesfromfilesystem
-msgid "Add Files from File System"
-msgstr "Pridať súbory zo systému súborov"
 
 #: lazarusidestrconsts.lispckeditaddtoproject
 msgctxt "lazarusidestrconsts.lispckeditaddtoproject"

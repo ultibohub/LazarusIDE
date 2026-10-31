@@ -5614,6 +5614,10 @@ msgstr "Přidat -FcUTF8"
 msgid "May be needed if source files have non-ansistring literals."
 msgstr "Může být potřeba pokud zdrojové soubory mají ne-ansi znaky v řetězcích."
 
+#: lazarusidestrconsts.lisaddfilesfromfs
+msgid "Add files from disk ..."
+msgstr ""
+
 #: lazarusidestrconsts.lisaddfilter
 msgid "Add Filter ..."
 msgstr "Přidat Filtr ..."
@@ -5656,7 +5660,7 @@ msgid "Add new disk files?"
 msgstr ""
 
 #: lazarusidestrconsts.lisaddnewfilesfromfilesystem
-msgid "Add New Files from File System"
+msgid "Add missing files from search paths"
 msgstr ""
 
 #: lazarusidestrconsts.lisaddnewmacro
@@ -9993,11 +9997,6 @@ msgstr "Exportovat vše"
 msgid "Export All Items to File"
 msgstr "Exportovat všechny položky do souboru"
 
-#: lazarusidestrconsts.lisexportenvironmentoptions
-msgctxt "lazarusidestrconsts.lisexportenvironmentoptions"
-msgid "Export environment options"
-msgstr "Exportovat volby prostředí"
-
 #: lazarusidestrconsts.lisexporthtml
 #, fuzzy
 #| msgid "Export as HTML"
@@ -11052,11 +11051,6 @@ msgstr "Importovat"
 msgctxt "lazarusidestrconsts.lisimportant"
 msgid "Important"
 msgstr "Důležité"
-
-#: lazarusidestrconsts.lisimportenvironmentoptions
-msgctxt "lazarusidestrconsts.lisimportenvironmentoptions"
-msgid "Import environment options"
-msgstr "Importovat volby prostředí"
 
 #: lazarusidestrconsts.lisimportfromfile
 msgid "Import from File"
@@ -14974,10 +14968,6 @@ msgstr "Vyčistit pro použití jména balíčku"
 #: lazarusidestrconsts.lispckdisablei18noflfm
 msgid "Disable I18N of lfm"
 msgstr "Zakázat I18N v lfm"
-
-#: lazarusidestrconsts.lispckeditaddfilesfromfilesystem
-msgid "Add Files from File System"
-msgstr "Přidat soubor ze souborového systému"
 
 #: lazarusidestrconsts.lispckeditaddtoproject
 msgctxt "lazarusidestrconsts.lispckeditaddtoproject"

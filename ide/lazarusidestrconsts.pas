@@ -1209,8 +1209,6 @@ resourcestring
   dlgPreferDoubleClickOverSingleClick = 'Prefer double-click over single-click';
   dlgCurrentlyRespectedByMessagesWindow = 'Currently respected by messages window, '
     +'jump history and search results.';
-  lisExportEnvironmentOptions = 'Export environment options';
-  lisImportEnvironmentOptions = 'Import environment options';
   lisComboBoxes = 'Combo Boxes';
   lisDropDownCount = 'Drop Down Count';
   lisDropDownCountHint = 'Used for all ComboBoxes in IDE dialogs';
@@ -4570,8 +4568,8 @@ resourcestring
   lisPckEditOptionsForPackage = 'Options for Package %s';
   lisPckEditSavePackage = 'Save Package';
   lisPckEditCompilePackage = 'Compile package';
-  lisPckEditAddFilesFromFileSystem = 'Add Files from File System';
-  lisAddNewFilesFromFileSystem = 'Add New Files from File System';
+  lisAddFilesFromFS = 'Add files from disk ...';
+  lisAddNewFilesFromFileSystem = 'Add missing files from search paths';
   lisPckEditRemoveSelectedItem = 'Remove selected item';
   lisUse = 'Use';
   lisClickToSeeTheChoices = 'Click to see the choices';
