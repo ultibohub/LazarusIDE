@@ -41,6 +41,8 @@ type
     FDragObject: TDragObject;
     FDragCursor: TCursor;
     FDragCursorApplied: Boolean;
+    procedure ApplyDragCursor(ACursor: TCursor);
+    procedure RemoveDragCursor;
   protected
     function Dragging(AControl: TControl): boolean; override;
     procedure DragStarted(APosition: TPoint); override;
@@ -172,6 +174,22 @@ begin
     FDragImageList.BeginDrag(0, APosition.X, APosition.Y);
 end;
 
+procedure TDragPerformer.ApplyDragCursor(ACursor: TCursor);
+begin
+  Screen.BeginTempCursor(ACursor);
+  if FDragCursorApplied then
+    Screen.EndTempCursor(FDragCursor);
+  FDragCursor := ACursor;
+  FDragCursorApplied := True;
+end;
+
+procedure TDragPerformer.RemoveDragCursor;
+begin
+  if not FDragCursorApplied then Exit;
+  Screen.EndTempCursor(FDragCursor);
+  FDragCursorApplied := False;
+end;
+
 procedure TDragPerformer.DragMove(APosition: TPoint);
 var 
   ATarget: TControl;
@@ -213,14 +231,11 @@ begin
     end
     else
       FDragImageList.EndDrag;
-  end
-  else begin
-    Screen.BeginTempCursor(DragCursor);
-    if FDragCursorApplied then
-      Screen.EndTempCursor(FDragCursor);
-    FDragCursor := DragCursor;
-    FDragCursorApplied := True;
   end;
+  if (FDragImageList = nil) or not FDragImageList.Dragging then
+    ApplyDragCursor(DragCursor)
+  else
+    RemoveDragCursor;
 end;
 
 procedure TDragPerformer.DragStop(ADropped : Boolean);
@@ -237,10 +252,8 @@ begin
     SetCaptureControl(nil);
 
     if FDragImageList <> nil then
-      FDragImageList.EndDrag
-    else
-    if FDragCursorApplied then
-      Screen.EndTempCursor(FDragCursor);
+      FDragImageList.EndDrag;
+    RemoveDragCursor;
     if (ADragObjectCopy.DragTarget <> nil) and (ADragObjectCopy.DragTarget is TControl) then
       TargetPos := ADragObjectCopy.DragTargetPos //controls can override the position
     else
@@ -720,6 +733,14 @@ begin
   end;
 end;
 
+function ScaleDragThreshold(AControl: TControl; AThreshold: Integer): Integer;
+begin
+  if GetParentDesignControl(AControl) <> nil then
+    Result := AControl.Scale96ToForm(AThreshold)
+  else
+    Result := AControl.Scale96ToScreen(AThreshold);
+end;
+
 procedure TDragManagerDefault.DragStart(AControl: TControl; AImmediate: Boolean; AThreshold: Integer; StartFromCurrentMouse:Boolean=False);
 //Start a drag operation
 begin
@@ -727,9 +748,9 @@ begin
   begin
     FDelay := 0;
     if AThreshold >= 0 then
-      FThresholdValue := AControl.Scale96ToForm(AThreshold)
+      FThresholdValue := ScaleDragThreshold(AControl, AThreshold)
     else
-      FThresholdValue := AControl.Scale96ToForm(DragThreshold);
+      FThresholdValue := ScaleDragThreshold(AControl, DragThreshold);
     FWaitForTreshold := not AImmediate;
     if StartFromCurrentMouse then
       FStartPosition:=AControl.ClientToScreen(point(0,0))
@@ -767,9 +788,9 @@ begin
     FDelayTimer.Enabled := True;
 
     if AThreshold >= 0 then
-      FThresholdValue := AControl.Scale96ToForm(AThreshold)
+      FThresholdValue := ScaleDragThreshold(AControl, AThreshold)
     else
-      FThresholdValue := AControl.Scale96ToForm(DragThreshold);
+      FThresholdValue := ScaleDragThreshold(AControl, DragThreshold);
 
     FWaitForTreshold := true;
 
@@ -953,9 +974,9 @@ var
   aRect:TRect;
 begin
   if AThreshold<=0 then
-    Threshold:=Site.Scale96ToForm(DragThreshold)
+    Threshold:=ScaleDragThreshold(Site, DragThreshold)
   else
-    Threshold:=Site.Scale96ToForm(AThreshold);
+    Threshold:=ScaleDragThreshold(Site, AThreshold);
   aRect := Site.ClientRect;
   InflateRect(aRect, Threshold, Threshold);
   Result := not PtInRect(aRect, Point(X, Y));

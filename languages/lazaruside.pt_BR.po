@@ -5571,6 +5571,10 @@ msgstr "Adicionar -FcUTF8"
 msgid "May be needed if source files have non-ansistring literals."
 msgstr "Pode ser necessário se os arquivos fonte tiverem literais string não ansi"
 
+#: lazarusidestrconsts.lisaddfilesfromfs
+msgid "Add files from disk ..."
+msgstr ""
+
 #: lazarusidestrconsts.lisaddfilter
 msgid "Add Filter ..."
 msgstr "Adicionar Filtro ..."
@@ -5613,7 +5617,7 @@ msgid "Add new disk files?"
 msgstr ""
 
 #: lazarusidestrconsts.lisaddnewfilesfromfilesystem
-msgid "Add New Files from File System"
+msgid "Add missing files from search paths"
 msgstr ""
 
 #: lazarusidestrconsts.lisaddnewmacro
@@ -9969,11 +9973,6 @@ msgstr "Exportar tudo"
 msgid "Export All Items to File"
 msgstr "Exportar todos itens para arquivo"
 
-#: lazarusidestrconsts.lisexportenvironmentoptions
-msgctxt "lazarusidestrconsts.lisexportenvironmentoptions"
-msgid "Export environment options"
-msgstr "Exportar opções de ambiente"
-
 #: lazarusidestrconsts.lisexporthtml
 #, fuzzy
 #| msgid "Export as HTML"
@@ -11018,11 +11017,6 @@ msgstr "Importar"
 msgctxt "lazarusidestrconsts.lisimportant"
 msgid "Important"
 msgstr "Importante"
-
-#: lazarusidestrconsts.lisimportenvironmentoptions
-msgctxt "lazarusidestrconsts.lisimportenvironmentoptions"
-msgid "Import environment options"
-msgstr "Importar opções de ambiente"
 
 #: lazarusidestrconsts.lisimportfromfile
 msgid "Import from File"
@@ -14921,10 +14915,6 @@ msgstr "Limpar para usar o nome do pacote"
 #: lazarusidestrconsts.lispckdisablei18noflfm
 msgid "Disable I18N of lfm"
 msgstr "Desabilitar I18N do lfm"
-
-#: lazarusidestrconsts.lispckeditaddfilesfromfilesystem
-msgid "Add Files from File System"
-msgstr "Adicionar arquivos do sistema de arquivo"
 
 #: lazarusidestrconsts.lispckeditaddtoproject
 msgctxt "lazarusidestrconsts.lispckeditaddtoproject"
