@@ -8251,10 +8251,10 @@ var
   r: integer;
   CheckingView: TExtToolView;
 begin
+  Result:=mrCancel;
   if ToolStatus<>itNone then begin
     IDEMessageDialog(lisNotNow,lisYouCanNotBuildLazarusWhileDebuggingOrCompiling,
                      mtError,[mbCancel]);
-    Result:=mrCancel;
     exit;
   end;
 
@@ -8267,7 +8267,7 @@ begin
   // clear old error lines
   SourceEditorManager.ClearErrorLines;
 
-  Result:=DoSaveAll([sfDoNotSaveVirtualFiles]);
+  Result:=DoSaveAll([]);
   if Result<>mrOk then begin
     DebugLn('Error: (lazarus) TMainIDE.DoBuildLazarus: failed because saving failed');
     exit;
