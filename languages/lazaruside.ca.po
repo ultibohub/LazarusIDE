@@ -2117,6 +2117,14 @@ msgctxt "lazarusidestrconsts.dlgfilterxml"
 msgid "XML files"
 msgstr "Arxius XML"
 
+#: lazarusidestrconsts.dlgfinddeclarationincomments
+msgid "Find declaration in comments"
+msgstr ""
+
+#: lazarusidestrconsts.dlgfinddeclarationincommentshint
+msgid "Find declaration also works for identifiers in comments and in disabled code, e.g. in an inactive {$ELSE} part"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfindtextatcursor
 msgid "Find text at cursor"
 msgstr "Cerca el text al cursor"
@@ -9258,6 +9266,14 @@ msgstr "Ignora els espais al final de la línia"
 msgid "Ignore spaces at start of line"
 msgstr "Ignora els espais al començament de la línia"
 
+#: lazarusidestrconsts.lisdiffdlgnextdifference
+msgid "Next difference"
+msgstr ""
+
+#: lazarusidestrconsts.lisdiffdlgnodifferences
+msgid "No differences."
+msgstr ""
+
 #: lazarusidestrconsts.lisdiffdlgonlyselection
 msgid "Only selection"
 msgstr "Selecció única"
@@ -9267,6 +9283,19 @@ msgstr "Selecció única"
 #| msgid "Open Diff in editor"
 msgid "Open difference in editor"
 msgstr "Obre les diferències a l'editor"
+
+#: lazarusidestrconsts.lisdiffdlgpreviousdifference
+msgid "Previous difference"
+msgstr ""
+
+#: lazarusidestrconsts.lisdiffdlgshowwholetext
+msgid "Show whole text"
+msgstr ""
+
+#: lazarusidestrconsts.lisdiffdlgstats
+#, object-pascal-format
+msgid "%d added, %d deleted, %d modified."
+msgstr ""
 
 #: lazarusidestrconsts.lisdifferentunitfoundatnewposition
 #, object-pascal-format
@@ -9334,6 +9363,10 @@ msgstr ""
 msgid "Click on one of the above items to see the diff"
 msgstr "Feu un clic en els elements d'amunt per veure'n les diferencies"
 
+#: lazarusidestrconsts.lisdiskdiffclosecheckedfiles
+msgid "Close checked files"
+msgstr ""
+
 #: lazarusidestrconsts.lisdiskdifferrorreadingfile
 #, object-pascal-format
 msgid "Error reading file: %s"
@@ -9345,6 +9378,10 @@ msgstr ""
 
 #: lazarusidestrconsts.lisdiskdiffreloadcheckedfilesfromdisk
 msgid "Reload checked files from disk"
+msgstr ""
+
+#: lazarusidestrconsts.lisdiskdiffreloadclosecheckedfiles
+msgid "Reload/close checked files"
 msgstr ""
 
 #: lazarusidestrconsts.lisdiskdiffsomefileshavechangedondisk

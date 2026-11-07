@@ -2059,6 +2059,14 @@ msgctxt "lazarusidestrconsts.dlgfilterxml"
 msgid "XML files"
 msgstr "Αρχεία XML"
 
+#: lazarusidestrconsts.dlgfinddeclarationincomments
+msgid "Find declaration in comments"
+msgstr ""
+
+#: lazarusidestrconsts.dlgfinddeclarationincommentshint
+msgid "Find declaration also works for identifiers in comments and in disabled code, e.g. in an inactive {$ELSE} part"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfindtextatcursor
 msgid "Find text at cursor"
 msgstr "Βρείτε κείμενο στον κέρσορα"
@@ -9023,6 +9031,14 @@ msgstr "Αγνοήστε τα κενά στο τέλος της γραμμής"
 msgid "Ignore spaces at start of line"
 msgstr "Αγνοήστε τα κενά στην αρχή της γραμμής"
 
+#: lazarusidestrconsts.lisdiffdlgnextdifference
+msgid "Next difference"
+msgstr ""
+
+#: lazarusidestrconsts.lisdiffdlgnodifferences
+msgid "No differences."
+msgstr ""
+
 #: lazarusidestrconsts.lisdiffdlgonlyselection
 msgid "Only selection"
 msgstr "Μόνο επιλογή"
@@ -9030,6 +9046,19 @@ msgstr "Μόνο επιλογή"
 #: lazarusidestrconsts.lisdiffdlgopendiffineditor
 msgid "Open difference in editor"
 msgstr "Άνοιγμα διαφοράς στον επεξεργαστή"
+
+#: lazarusidestrconsts.lisdiffdlgpreviousdifference
+msgid "Previous difference"
+msgstr ""
+
+#: lazarusidestrconsts.lisdiffdlgshowwholetext
+msgid "Show whole text"
+msgstr ""
+
+#: lazarusidestrconsts.lisdiffdlgstats
+#, object-pascal-format
+msgid "%d added, %d deleted, %d modified."
+msgstr ""
 
 #: lazarusidestrconsts.lisdifferentunitfoundatnewposition
 #, object-pascal-format
@@ -9097,6 +9126,10 @@ msgstr "Απόρριψη αλλαγών, δημιουργία νέου έργο�
 msgid "Click on one of the above items to see the diff"
 msgstr "Κάντε κλικ σε ένα από τα παραπάνω στοιχεία για να δείτε τη διαφορά"
 
+#: lazarusidestrconsts.lisdiskdiffclosecheckedfiles
+msgid "Close checked files"
+msgstr ""
+
 #: lazarusidestrconsts.lisdiskdifferrorreadingfile
 #, object-pascal-format
 msgid "Error reading file: %s"
@@ -9109,6 +9142,10 @@ msgstr "Αγνοήστε όλες τις αλλαγές στο δίσκο"
 #: lazarusidestrconsts.lisdiskdiffreloadcheckedfilesfromdisk
 msgid "Reload checked files from disk"
 msgstr "Επαναφόρτωση ελεγμένων αρχείων από το δίσκο"
+
+#: lazarusidestrconsts.lisdiskdiffreloadclosecheckedfiles
+msgid "Reload/close checked files"
+msgstr ""
 
 #: lazarusidestrconsts.lisdiskdiffsomefileshavechangedondisk
 msgid "Some files have changed on disk:"

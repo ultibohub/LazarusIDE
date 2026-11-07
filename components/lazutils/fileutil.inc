@@ -460,13 +460,43 @@ begin
   {$ENDIF}
 end;
 
+// generated based on FPC "compiler\systems\i_*.pas", see MR !852
 function GetExeExt: string;
 begin
-  {$IFDEF WINDOWS}
-  Result:='.exe';
-  {$ELSE}
-  Result:='';
-  {$ENDIF}
+  Result:=
+  {$IF     defined(amstradcpc   )} '.com'  // Amstrad CPC
+  {$ELSEIF defined(atari        )} '.ttp'  // Atari ST/STE
+  {$ELSEIF defined(Embedded     )}         // Embedded
+    {$IF     defined(CPUI8086 )}   '.exe'
+    {$ELSEIF defined(CPUWASM32)}   '.wasm'
+    {$ELSE                     }   ''
+    {$ENDIF                    }
+  {$ELSEIF defined(EMX          )} '.exe'  // OS/2 via EMX
+  {$ELSEIF defined(gba          )} '.gba'  // GameBoy Advance
+  {$ELSEIF defined(Go32v2       )} '.exe'  // GO32 V2 DOS extender
+  {$ELSEIF defined(human68k     )} '.x'    // Human 68k
+  {$ELSEIF defined(MSDOS        )} '.exe'  // MS-DOS 16-bit real mode
+  {$ELSEIF defined(MSXDOS       )} '.com'  // MSX-DOS
+  {$ELSEIF defined(NativeNT     )} '.exe'  // Native NT for i386
+  {$ELSEIF defined(nds          )} '.bin'  // Nintendo DS
+  {$ELSEIF defined(Netwlibc     )} '.nlm'  // Netware for i386(libc)
+  {$ELSEIF defined(Netware      )} '.nlm'  // Netware for i386(clib)
+  {$ELSEIF defined(OS2          )} '.exe'  // OS/2
+  {$ELSEIF defined(sinclairql   )} '.exe'  // Sinclair QL
+  {$ELSEIF defined(Symbian      )} '.exe'  // Symbian OS
+  {$ELSEIF defined(Wasip1       )} '.wasm' // The WebAssembly System Interface Preview 1 (WASI 0.1)
+  {$ELSEIF defined(Wasip1threads)} '.wasm' // The WebAssembly System Interface Preview 1 with Multithreading (WASI 0.1 + wasi-threads)
+  {$ELSEIF defined(Wasip2       )} '.wasm' // The WebAssembly System Interface Preview 2 (WASI 0.2)
+  {$ELSEIF defined(WATCOM       )} '.exe'  // Watcom compatible DOS extenders
+  {$ELSEIF defined(WDOSX        )} '.exe'  // WDOSX DOS extender
+  {$ELSEIF defined(Wii          )} '.dol'  // Nintendo Wii
+  {$ELSEIF defined(Win32        )} '.exe'  // Win32 for i386
+  {$ELSEIF defined(Win64        )} '.exe'  // Win64
+  {$ELSEIF defined(WinCE        )} '.exe'  // WinCE
+  {$ELSEIF defined(Win16        )} '.exe'  // Win16 for x86
+  {$ELSEIF defined(zxspectrum   )} '.tzx'  // ZX Spectrum
+  {$ELSE                         } ''      // other
+  {$ENDIF                        }
 end;
 
 function ReadFileToBytes(const Filename: string): TBytes;
@@ -806,22 +836,18 @@ begin
   if FilenameIsAbsolute(Executable) then begin
     Result:=Executable;
     if FileExistsUTF8(Result) then exit;
-    {$IFDEF Windows}
-    if ExtractFileExt(Result)='' then begin
-      Result:=Result+'.exe';
+    if (ExtractFileExt(Result)='') and (GetExeExt<>'') then begin
+      Result:=Result+GetExeExt;
       if FileExistsUTF8(Result) then exit;
     end;
-    {$ENDIF}
   end else begin
     Env:=GetEnvironmentVariableUTF8('PATH');
     Result:=SearchFileInPath(Executable, BaseDir, Env, PathSeparator, sffFindProgramInPath);
     if Result<>'' then exit;
-    {$IFDEF Windows}
-    if ExtractFileExt(Executable)='' then begin
-      Result:=SearchFileInPath(Executable+'.exe', BaseDir, Env, PathSeparator, sffFindProgramInPath);
+    if (ExtractFileExt(Executable)='') and (GetExeExt<>'') then begin
+      Result:=SearchFileInPath(Executable+GetExeExt, BaseDir, Env, PathSeparator, sffFindProgramInPath);
       if Result<>'' then exit;
     end;
-    {$ENDIF}
   end;
   Result:='';
 end;

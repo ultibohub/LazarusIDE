@@ -2075,6 +2075,14 @@ msgctxt "lazarusidestrconsts.dlgfilterxml"
 msgid "XML files"
 msgstr "Файли XML"
 
+#: lazarusidestrconsts.dlgfinddeclarationincomments
+msgid "Find declaration in comments"
+msgstr ""
+
+#: lazarusidestrconsts.dlgfinddeclarationincommentshint
+msgid "Find declaration also works for identifiers in comments and in disabled code, e.g. in an inactive {$ELSE} part"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfindtextatcursor
 msgid "Find text at cursor"
 msgstr "Знайти текст під курсором"
@@ -9133,6 +9141,14 @@ msgstr "Нехтувати пробіли в кінці рядка"
 msgid "Ignore spaces at start of line"
 msgstr "Нехтувати пробіли на початку рядка"
 
+#: lazarusidestrconsts.lisdiffdlgnextdifference
+msgid "Next difference"
+msgstr ""
+
+#: lazarusidestrconsts.lisdiffdlgnodifferences
+msgid "No differences."
+msgstr ""
+
 #: lazarusidestrconsts.lisdiffdlgonlyselection
 msgid "Only selection"
 msgstr "Тільки вибране"
@@ -9140,6 +9156,19 @@ msgstr "Тільки вибране"
 #: lazarusidestrconsts.lisdiffdlgopendiffineditor
 msgid "Open difference in editor"
 msgstr "Відкрити відмінності у редакторі"
+
+#: lazarusidestrconsts.lisdiffdlgpreviousdifference
+msgid "Previous difference"
+msgstr ""
+
+#: lazarusidestrconsts.lisdiffdlgshowwholetext
+msgid "Show whole text"
+msgstr ""
+
+#: lazarusidestrconsts.lisdiffdlgstats
+#, object-pascal-format
+msgid "%d added, %d deleted, %d modified."
+msgstr ""
 
 #: lazarusidestrconsts.lisdifferentunitfoundatnewposition
 #, object-pascal-format
@@ -9207,6 +9236,10 @@ msgstr "Відхилити зміни, створити новий проєкт"
 msgid "Click on one of the above items to see the diff"
 msgstr "Виберіть один з елементів вище, щоб побачити різницю"
 
+#: lazarusidestrconsts.lisdiskdiffclosecheckedfiles
+msgid "Close checked files"
+msgstr ""
+
 #: lazarusidestrconsts.lisdiskdifferrorreadingfile
 #, object-pascal-format
 msgid "Error reading file: %s"
@@ -9219,6 +9252,10 @@ msgstr "Знехтувати всіма змінами на диску"
 #: lazarusidestrconsts.lisdiskdiffreloadcheckedfilesfromdisk
 msgid "Reload checked files from disk"
 msgstr "Перезавантажити змінені файли з диска"
+
+#: lazarusidestrconsts.lisdiskdiffreloadclosecheckedfiles
+msgid "Reload/close checked files"
+msgstr ""
 
 #: lazarusidestrconsts.lisdiskdiffsomefileshavechangedondisk
 msgid "Some files have changed on disk:"

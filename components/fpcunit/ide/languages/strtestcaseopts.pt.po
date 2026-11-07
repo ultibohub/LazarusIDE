@@ -49,6 +49,22 @@ msgstr "Mensagem da excepção: %s"
 msgid "%s     Failures: %s"
 msgstr "%s     Falhas: %s"
 
+#: strtestcaseopts.rsfind
+msgid "Find:"
+msgstr ""
+
+#: strtestcaseopts.rsfindhint
+msgid "Highlight tests containing this text"
+msgstr ""
+
+#: strtestcaseopts.rsfindnext
+msgid "Find next"
+msgstr ""
+
+#: strtestcaseopts.rsfindprevious
+msgid "Find previous"
+msgstr ""
+
 #: strtestcaseopts.rsmessage
 #, object-pascal-format
 msgid "Message: %s"
@@ -79,12 +95,21 @@ msgstr "Porta do servidor"
 msgid "Test Insight"
 msgstr "Test Insight"
 
+#: strtestcaseopts.rstestprojectstopped
+#, object-pascal-format
+msgid "Test project %s stopped."
+msgstr ""
+
 #: strtestcaseopts.sactcheckall
-msgid "Select all tests"
+#, fuzzy
+#| msgid "Select all tests"
+msgid "Check all tests"
 msgstr "Seleccionar todos os testes"
 
 #: strtestcaseopts.sactcheckcurrentsuite
-msgid "Select current suite"
+#, fuzzy
+#| msgid "Select current suite"
+msgid "Check current suite"
 msgstr "Seleccionar o conjunto actual"
 
 #: strtestcaseopts.sactcloseform
@@ -109,7 +134,9 @@ msgid "Copy message to clipboard"
 msgstr "Copiar mensagem para a prancheta"
 
 #: strtestcaseopts.sactrunaction
-msgid "&Run all"
+#, fuzzy
+#| msgid "&Run all"
+msgid "&Run checked tests"
 msgstr "Executa&r todos"
 
 #: strtestcaseopts.sactrunactionh
@@ -117,19 +144,35 @@ msgid "Run all checked tests"
 msgstr "Executar todos os testes marcados"
 
 #: strtestcaseopts.sactrunhighlightedtest
-msgid "Run selected"
+#, fuzzy
+#| msgid "Run selected"
+msgid "Run highlighted test"
 msgstr "Executar seleccionado"
 
 #: strtestcaseopts.sactrunhighlightedtesth
-msgid "Run selected test"
+#, fuzzy
+#| msgid "Run selected test"
+msgid "Run only the highlighted test or suite"
 msgstr "Executar o teste seleccionado"
 
+#: strtestcaseopts.sactstop
+msgid "Stop"
+msgstr ""
+
+#: strtestcaseopts.sactstoph
+msgid "Stop the running test project"
+msgstr ""
+
 #: strtestcaseopts.sactuncheckall
-msgid "Deselect all tests"
+#, fuzzy
+#| msgid "Deselect all tests"
+msgid "Uncheck all tests"
 msgstr "Desmarcar todos os textos"
 
 #: strtestcaseopts.sactuncheckcurrentsuite
-msgid "Deselect current suite"
+#, fuzzy
+#| msgid "Deselect current suite"
+msgid "Uncheck current suite"
 msgstr "Desmarcar o conjunto actual"
 
 #: strtestcaseopts.sbtncreate

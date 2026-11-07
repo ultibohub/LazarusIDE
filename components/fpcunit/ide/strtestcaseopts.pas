@@ -53,16 +53,19 @@ resourcestring
   rsExceptionCla = 'Exception class: %s';
   // Visual components captions
   sfrmGUITest = 'FPCUnit - run unit test';
-  sactRunAction = '&Run all';
+  sactRunAction = '&Run checked tests';
   sactRunActionH = 'Run all checked tests';
+  sactStop = 'Stop';
+  sactStopH = 'Stop the running test project';
+  rsTestProjectStopped = 'Test project %s stopped.';
   sactCloseForm = 'Quit';
   sactCloseFormH = 'Quit testing';
-  sactCheckCurrentSuite = 'Select current suite';
-  sactUncheckCurrentSuite = 'Deselect current suite';
-  sactCheckAll = 'Select all tests';
-  sactUncheckAll = 'Deselect all tests';
-  sactRunHighlightedTest = 'Run selected';
-  sactRunHighlightedTestH = 'Run selected test';
+  sactCheckCurrentSuite = 'Check current suite';
+  sactUncheckCurrentSuite = 'Uncheck current suite';
+  sactCheckAll = 'Check all tests';
+  sactUncheckAll = 'Uncheck all tests';
+  sactRunHighlightedTest = 'Run highlighted test';
+  sactRunHighlightedTestH = 'Run only the highlighted test or suite';
   smiActions = 'Actions';
   smiTestTree = 'Test tree';
   smiEdit = 'Edit';
@@ -70,6 +73,10 @@ resourcestring
   smiExpandNodes = 'Expand Nodes';
   rsNextError = 'Next error';
   rsPreviousError = 'Previous error';
+  rsFind = 'Find:';
+  rsFindHint = 'Highlight tests containing this text';
+  rsFindNext = 'Find next';
+  rsFindPrevious = 'Find previous';
   sactCopyAllToClipboard = 'Copy text to clipboard';
   sactCopyMessageToClipboard = 'Copy message to clipboard';
   sactCopyAllToClipboardH = 'Copy the entire text to clipboard';

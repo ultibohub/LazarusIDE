@@ -2056,6 +2056,14 @@ msgstr "Ohjelmat"
 msgid "XML files"
 msgstr "XML-tiedostot"
 
+#: lazarusidestrconsts.dlgfinddeclarationincomments
+msgid "Find declaration in comments"
+msgstr ""
+
+#: lazarusidestrconsts.dlgfinddeclarationincommentshint
+msgid "Find declaration also works for identifiers in comments and in disabled code, e.g. in an inactive {$ELSE} part"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfindtextatcursor
 msgid "Find text at cursor"
 msgstr "Etsi tekstiä kursorin kohdalta"
@@ -9133,6 +9141,14 @@ msgstr "Jätä huomiotta välilyönnit rivin lopussa"
 msgid "Ignore spaces at start of line"
 msgstr "Jätä huomiotta välilyönnit rivin alussa"
 
+#: lazarusidestrconsts.lisdiffdlgnextdifference
+msgid "Next difference"
+msgstr ""
+
+#: lazarusidestrconsts.lisdiffdlgnodifferences
+msgid "No differences."
+msgstr ""
+
 #: lazarusidestrconsts.lisdiffdlgonlyselection
 msgid "Only selection"
 msgstr "Ainoastaan valittu osa"
@@ -9140,6 +9156,19 @@ msgstr "Ainoastaan valittu osa"
 #: lazarusidestrconsts.lisdiffdlgopendiffineditor
 msgid "Open difference in editor"
 msgstr "Avaa eroavuudet editorissa"
+
+#: lazarusidestrconsts.lisdiffdlgpreviousdifference
+msgid "Previous difference"
+msgstr ""
+
+#: lazarusidestrconsts.lisdiffdlgshowwholetext
+msgid "Show whole text"
+msgstr ""
+
+#: lazarusidestrconsts.lisdiffdlgstats
+#, object-pascal-format
+msgid "%d added, %d deleted, %d modified."
+msgstr ""
 
 #: lazarusidestrconsts.lisdifferentunitfoundatnewposition
 #, object-pascal-format
@@ -9207,6 +9236,10 @@ msgstr "Hylkää muutokset, luo uusi projekti"
 msgid "Click on one of the above items to see the diff"
 msgstr "Klikkaa jotain ylläolevaa kohtaa nähdäksesi muuttuneet kohdat"
 
+#: lazarusidestrconsts.lisdiskdiffclosecheckedfiles
+msgid "Close checked files"
+msgstr ""
+
 #: lazarusidestrconsts.lisdiskdifferrorreadingfile
 #, object-pascal-format
 msgid "Error reading file: %s"
@@ -9219,6 +9252,10 @@ msgstr "Ohita kaikki muutokset levyllä"
 #: lazarusidestrconsts.lisdiskdiffreloadcheckedfilesfromdisk
 msgid "Reload checked files from disk"
 msgstr "Lataa valitut tiedostot uudestaan levyltä"
+
+#: lazarusidestrconsts.lisdiskdiffreloadclosecheckedfiles
+msgid "Reload/close checked files"
+msgstr ""
 
 #: lazarusidestrconsts.lisdiskdiffsomefileshavechangedondisk
 msgid "Some files have changed on disk:"

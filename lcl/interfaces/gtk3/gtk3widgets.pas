@@ -15132,14 +15132,19 @@ begin
     end;
     NoneAtom := nil; // GDK_NONE = any type
     Data := nil;
-    if gdk_property_get_raw(ActiveWin, PidAtom, NoneAtom, 0, 2,
-      0, @ActualType, @DataFmt, @DataLen, @Data) then
-    begin
-      if Data <> nil then
+    gdk_error_trap_push;
+    try
+      if gdk_property_get_raw(ActiveWin, PidAtom, NoneAtom, 0, 2,
+        0, @ActualType, @DataFmt, @DataLen, @Data) then
       begin
-        Result := (Pgulong(Data)^ = gulong(GetProcessID));
-        g_free(Data);
+        if Data <> nil then
+        begin
+          Result := (Pgulong(Data)^ = gulong(GetProcessID));
+          g_free(Data);
+        end;
       end;
+    finally
+      gdk_error_trap_pop_ignored;
     end;
   finally
     g_object_unref(PGObject(ActiveWin));
@@ -16178,10 +16183,7 @@ begin
       if FWidgetType = [wtHintWindow] then
         gtk_window_set_type_hint(PGtkWindow(Result), GDK_WINDOW_TYPE_HINT_TOOLTIP)
       else
-      if Assigned(Application) and (Application.MainForm = AForm) then
-        gtk_window_set_type_hint(PGtkWindow(Result), GDK_WINDOW_TYPE_HINT_NORMAL)
-      else
-        gtk_window_set_type_hint(PGtkWindow(Result), GDK_WINDOW_TYPE_HINT_UTILITY);
+        gtk_window_set_type_hint(PGtkWindow(Result), GDK_WINDOW_TYPE_HINT_NORMAL);
     end;
     if FWidgetType = [wtHintWindow] then
       FWidgetType := [wtWidget, wtLayout, wtScrollingWin, wtScrollingWinControl, wtWindow, wtHintWindow]

@@ -2119,6 +2119,14 @@ msgctxt "lazarusidestrconsts.dlgfilterxml"
 msgid "XML files"
 msgstr "File XML"
 
+#: lazarusidestrconsts.dlgfinddeclarationincomments
+msgid "Find declaration in comments"
+msgstr ""
+
+#: lazarusidestrconsts.dlgfinddeclarationincommentshint
+msgid "Find declaration also works for identifiers in comments and in disabled code, e.g. in an inactive {$ELSE} part"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfindtextatcursor
 msgid "Find text at cursor"
 msgstr "Cari teks di kursor"
@@ -9316,6 +9324,14 @@ msgstr "Abaikan spasi diakhir baris"
 msgid "Ignore spaces at start of line"
 msgstr "Abaikan spasi diawal baris"
 
+#: lazarusidestrconsts.lisdiffdlgnextdifference
+msgid "Next difference"
+msgstr ""
+
+#: lazarusidestrconsts.lisdiffdlgnodifferences
+msgid "No differences."
+msgstr ""
+
 #: lazarusidestrconsts.lisdiffdlgonlyselection
 msgid "Only selection"
 msgstr "Hanya pilihan"
@@ -9325,6 +9341,19 @@ msgstr "Hanya pilihan"
 #| msgid "Open Diff in editor"
 msgid "Open difference in editor"
 msgstr "Buka Diff dalam editor"
+
+#: lazarusidestrconsts.lisdiffdlgpreviousdifference
+msgid "Previous difference"
+msgstr ""
+
+#: lazarusidestrconsts.lisdiffdlgshowwholetext
+msgid "Show whole text"
+msgstr ""
+
+#: lazarusidestrconsts.lisdiffdlgstats
+#, object-pascal-format
+msgid "%d added, %d deleted, %d modified."
+msgstr ""
 
 #: lazarusidestrconsts.lisdifferentunitfoundatnewposition
 #, object-pascal-format
@@ -9392,6 +9421,10 @@ msgstr ""
 msgid "Click on one of the above items to see the diff"
 msgstr "Klik pada salah satu item diatas untuk melihat perbedaan"
 
+#: lazarusidestrconsts.lisdiskdiffclosecheckedfiles
+msgid "Close checked files"
+msgstr ""
+
 #: lazarusidestrconsts.lisdiskdifferrorreadingfile
 #, object-pascal-format
 msgid "Error reading file: %s"
@@ -9403,6 +9436,10 @@ msgstr ""
 
 #: lazarusidestrconsts.lisdiskdiffreloadcheckedfilesfromdisk
 msgid "Reload checked files from disk"
+msgstr ""
+
+#: lazarusidestrconsts.lisdiskdiffreloadclosecheckedfiles
+msgid "Reload/close checked files"
 msgstr ""
 
 #: lazarusidestrconsts.lisdiskdiffsomefileshavechangedondisk

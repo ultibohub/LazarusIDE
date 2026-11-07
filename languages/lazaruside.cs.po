@@ -2098,6 +2098,14 @@ msgctxt "lazarusidestrconsts.dlgfilterxml"
 msgid "XML files"
 msgstr "XML soubory"
 
+#: lazarusidestrconsts.dlgfinddeclarationincomments
+msgid "Find declaration in comments"
+msgstr ""
+
+#: lazarusidestrconsts.dlgfinddeclarationincommentshint
+msgid "Find declaration also works for identifiers in comments and in disabled code, e.g. in an inactive {$ELSE} part"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfindtextatcursor
 msgid "Find text at cursor"
 msgstr "Najít text od kurzoru"
@@ -9194,6 +9202,14 @@ msgstr "Ignorovat mezery na konci řádku"
 msgid "Ignore spaces at start of line"
 msgstr "Ignorovat mezery na začátku řádku"
 
+#: lazarusidestrconsts.lisdiffdlgnextdifference
+msgid "Next difference"
+msgstr ""
+
+#: lazarusidestrconsts.lisdiffdlgnodifferences
+msgid "No differences."
+msgstr ""
+
 #: lazarusidestrconsts.lisdiffdlgonlyselection
 msgid "Only selection"
 msgstr "Pouze výběr"
@@ -9201,6 +9217,19 @@ msgstr "Pouze výběr"
 #: lazarusidestrconsts.lisdiffdlgopendiffineditor
 msgid "Open difference in editor"
 msgstr "Otevřít rozdíl v editoru"
+
+#: lazarusidestrconsts.lisdiffdlgpreviousdifference
+msgid "Previous difference"
+msgstr ""
+
+#: lazarusidestrconsts.lisdiffdlgshowwholetext
+msgid "Show whole text"
+msgstr ""
+
+#: lazarusidestrconsts.lisdiffdlgstats
+#, object-pascal-format
+msgid "%d added, %d deleted, %d modified."
+msgstr ""
 
 #: lazarusidestrconsts.lisdifferentunitfoundatnewposition
 #, object-pascal-format
@@ -9268,6 +9297,10 @@ msgstr "Zahodit změny, vytvořit nový projekt"
 msgid "Click on one of the above items to see the diff"
 msgstr "Ke zobrazení rozdílu klikněte na jednu z položek nahoře"
 
+#: lazarusidestrconsts.lisdiskdiffclosecheckedfiles
+msgid "Close checked files"
+msgstr ""
+
 #: lazarusidestrconsts.lisdiskdifferrorreadingfile
 #, object-pascal-format
 msgid "Error reading file: %s"
@@ -9280,6 +9313,10 @@ msgstr "Ignorovat všechny diskové změny"
 #: lazarusidestrconsts.lisdiskdiffreloadcheckedfilesfromdisk
 msgid "Reload checked files from disk"
 msgstr "Znovu načíst ozančené soubory z disku"
+
+#: lazarusidestrconsts.lisdiskdiffreloadclosecheckedfiles
+msgid "Reload/close checked files"
+msgstr ""
 
 #: lazarusidestrconsts.lisdiskdiffsomefileshavechangedondisk
 msgid "Some files have changed on disk:"

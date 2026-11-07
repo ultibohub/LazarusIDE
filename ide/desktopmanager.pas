@@ -153,7 +153,7 @@ var
   dsk: TDesktopOpt;
 begin
   Result := False;
-  if aDesktopName = '' then
+  if aDesktopName = '' then // desktop name must not be empty
     Exit;
 
   with EnvironmentGuiOpts do
@@ -365,23 +365,16 @@ end;
 
 procedure TShowDesktopsToolButton.SaveAsDesktop(Sender: TObject);
 var
-  xDesktopName: string;
-  xShowOverwriteDlg: Boolean;
+  lOverwrite: boolean;
+  lName: string = '';
 begin
-  if Sender is TShowDesktopItem then
-  begin
-    xDesktopName := (Sender as TShowDesktopItem).DesktopName;
-    xShowOverwriteDlg := False;
-  end else
-  begin
-    if not InputQuery(dlgDesktopName, dlgSaveCurrentDesktopAs, xDesktopName)
-    or (xDesktopName = '') // xDesktopName MUST NOT BE EMPTY !!!
-    then
-      Exit;
-    xShowOverwriteDlg := True;
-  end;
-
-  SaveCurrentDesktop(xDesktopName, xShowOverwriteDlg);
+  lOverwrite := Sender is TShowDesktopItem;
+  if lOverwrite then
+    lName := TShowDesktopItem(Sender).DesktopName
+  else
+    if not InputQuery(dlgDesktopName, dlgSaveCurrentDesktopAs, lName) then
+      exit;
+  SaveCurrentDesktop(lName, not lOverwrite);
 end;
 
 procedure TShowDesktopsToolButton.SaveDesktop(Sender: TObject);
@@ -1027,13 +1020,12 @@ end;
 
 procedure TDesktopForm.ExportAllActionClick(Sender: TObject);
 var
-  xDesktops: array of TCustomDesktopOpt;
-  I: Integer;
+  l: array of TCustomDesktopOpt = nil;
+  d: TCustomDesktopOpt;
 begin
-  SetLength(xDesktops{%H-}, EnvironmentGuiOpts.Desktops.Count);
-  for I := 0 to Length(xDesktops)-1 do
-    xDesktops[I] := EnvironmentGuiOpts.Desktops[I];
-  ExportDesktops(xDesktops);
+  for d in EnvironmentGuiOpts.Desktops do
+    insert(d, l, length(l));
+  ExportDesktops(l);
 end;
 
 procedure TDesktopForm.SaveAsActionClick(Sender: TObject);

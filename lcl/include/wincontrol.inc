@@ -4407,7 +4407,8 @@ begin
   if FTabStop = NewTabStop then
     Exit;
   FTabStop := NewTabStop;
-  UpdateTabOrder(FTabOrder);
+  if not (csLoading in ComponentState) then
+    UpdateTabOrder(FTabOrder);
   Perform(CM_TABSTOPCHANGED, 0, 0);
 end;
 
@@ -7975,6 +7976,9 @@ begin
         for i := 0 to FControls.Count - 1 do
           TControl(FControls[i]).DoOnParentHandleDestruction;
 
+      // Kill all timers about the Handle before DestroyHandle
+      // Avoid dangling underlying handle
+      KillWndAllTimers(self.Handle);
       TWSWinControlClass(WidgetSetClass).DestroyHandle(Self);
       Handle := 0;
       Exclude(FWinControlFlags,wcfBoundsRealized);

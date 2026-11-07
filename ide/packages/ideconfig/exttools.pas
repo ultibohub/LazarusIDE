@@ -84,6 +84,7 @@ type
   TExternalTool = class(TAbstractExternalTool)
   private
     FThread: TExternalToolThread;
+    fEnvOverridesDone: boolean; // true = do not substitute macros in EnvironmentOverrides
     fExecuteAfter: TFPList; // list of TExternalTool
     fExecuteBefore: TFPList; // list of TExternalTool
     fNeedAfterSync: boolean;
@@ -639,13 +640,13 @@ begin
   {$ENDIF}
   if not FilenameIsAbsolute(Process.Executable) then begin
     if ExtractFilePath(Process.Executable)<>'' then
-      Process.Executable:=AppendPathDelim(GetCurrentDirUTF8)+Process.Executable
+      Process.Executable:=AppendPathDelim(Process.CurrentDirectory)+Process.Executable
     else if Process.Executable='' then begin
       ErrorMessage:=Format(lisToolHasNoExecutable, [Title]);
       CheckError;
       exit;
     end else begin
-      ExeFile:=FindDefaultExecutablePath(Process.Executable,GetCurrentDirUTF8);
+      ExeFile:=FindDefaultExecutablePath(Process.Executable,Process.CurrentDirectory);
       if ExeFile='' then begin
         ErrorMessage:=Format(lisCanNotFindExecutable, [Process.Executable]);
         CheckError;
@@ -675,7 +676,7 @@ begin
   WorkerMessages.BaseDirectory:=Process.CurrentDirectory;
   WorkerDirectory:=WorkerMessages.BaseDirectory;
   if EnvironmentOverrides.Count>0 then
-    AssignEnvironmentTo(Process.Environment,EnvironmentOverrides);
+    AssignEnvironmentTo(Process.Environment,EnvironmentOverrides,not fEnvOverridesDone);
 
   // init parsers
   for i:=0 to ParserCount-1 do begin
@@ -1015,9 +1016,12 @@ begin
     Process.Parameters[i]:=s;
   end;
 
-  for i:=0 to EnvironmentOverrides.Count-1 do begin
-    if not Resolve(EnvironmentOverrides[i],s) then exit;
-    EnvironmentOverrides[i]:=s;
+  if not fEnvOverridesDone then begin
+    for i:=0 to EnvironmentOverrides.Count-1 do begin
+      if not Resolve(EnvironmentOverrides[i],s) then exit;
+      EnvironmentOverrides[i]:=s;
+    end;
+    fEnvOverridesDone:=true;
   end;
 
   Result:=true;
@@ -1057,10 +1061,11 @@ function TExternalTools.RunToolAndDetach(ToolOptions: TIDEExternalToolOptions): 
 var
   i: Integer;
   Proc: TProcessUTF8;
-  sl: TStringList;
-  s, Path: String;
+  sl, Overrides: TStringList;
+  s: String;
 begin
   Result:=false;
+  Overrides:=nil;
   Proc:=TProcessUTF8.Create(nil);
   try
     Proc.InheritHandles:=false;
@@ -1080,17 +1085,20 @@ begin
     Proc.CurrentDirectory:=s;
 
     // environment
-    if ToolOptions.EnvironmentOverrides.Count>0 then
-      AssignEnvironmentTo(Proc.Environment,ToolOptions.EnvironmentOverrides);
-    if ToolOptions.ResolveMacros then begin
-      for i:=0 to Proc.Environment.Count-1 do begin
-        s:=Proc.Environment[i];
-        if not GlobalMacroList.SubstituteStr(s) then begin
-          Err('environment override "'+Proc.Environment[i]+'"');
-          exit;
+    if ToolOptions.EnvironmentOverrides.Count>0 then begin
+      Overrides:=TStringList.Create;
+      Overrides.Assign(ToolOptions.EnvironmentOverrides);
+      if ToolOptions.ResolveMacros then begin
+        for i:=0 to Overrides.Count-1 do begin
+          s:=Overrides[i];
+          if not GlobalMacroList.SubstituteStr(s) then begin
+            Err('environment override "'+Overrides[i]+'"');
+            exit;
+          end;
+          Overrides[i]:=s;
         end;
-        Proc.Environment[i]:=s;
       end;
+      AssignEnvironmentTo(Proc.Environment,Overrides,false);
     end;
 
     // executable
@@ -1102,20 +1110,8 @@ begin
       end;
     end;
     if not FilenameIsAbsolute(s) then begin
-      // search in PATH
-      if Proc.Environment.Count>0 then
-        Path:=Proc.Environment.Values['PATH']
-      else
-        Path:=GetEnvironmentVariableUTF8('PATH');
-      s:=SearchFileInPath(s,Proc.CurrentDirectory,
-                               Path, PathSeparator, sffFindProgramInPath);
-      {$IFDEF Windows}
-      if (s='') and (ExtractFileExt(s)='') then begin
-        s:=SearchFileInPath(s+'.exe',Proc.CurrentDirectory,
-                                 Path, PathSeparator,
-                                 sffFindProgramInPath);
-      end;
-      {$ENDIF}
+      // search in PATH of the IDE
+      s:=FindDefaultExecutablePath(s,Proc.CurrentDirectory);
       if s='' then begin
         Err('missing executable "'+ToolOptions.Executable+'"');
         exit;
@@ -1179,6 +1175,7 @@ begin
     except
     end;
   finally
+    Overrides.Free;
     Proc.Free;
   end;
 end;
@@ -1213,6 +1210,7 @@ begin
     else
       Tool.Process.ShowWindow:=swoShow;
     Tool.MaxIdleInMS:=ToolOptions.MaxIdleInMS;
+    TExternalTool(Tool).fEnvOverridesDone:=not ToolOptions.ResolveMacros;
     if ToolOptions.ResolveMacros and not Tool.ResolveMacros then begin
       debugln(['Error: (lazarus) [TExternalTools.RunToolWithParsers] failed to resolve macros']);
       exit;

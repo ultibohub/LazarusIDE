@@ -17,6 +17,8 @@
 **/*.compiled
 **/*.or
 **/*.log
+**/*.ini
+**/symbol_*.fpc
 !**/Makefile.compiled
 /docs/chm/**/*.chm
 /docs/chm/**/*.xct

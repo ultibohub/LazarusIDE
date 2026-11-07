@@ -3406,7 +3406,13 @@ function TPascalParserTool.ReadTilVariableEnd(
     @B
     inherited A
     A as B
+    A<B,C>.D  (mode delphi)
+    specialize A<B,C>.D  (mode objfpc)
+    A.specialize B<C>  (mode objfpc)
 }
+var
+  SpecFlags: TPascalParserFlags;
+  IsSpecialize: Boolean;
 begin
   while AtomIsChar('@') do
     ReadNextAtom;
@@ -3416,8 +3422,26 @@ begin
           or (CurPos.Flag in [cafRoundBracketOpen,cafEdgedBracketOpen]);
   if not Result then exit;
   repeat
-    if AtomIsIdentifier then
+    IsSpecialize:=false;
+    if (Scanner.CompilerMode=cmOBJFPC) and UpAtomIs('SPECIALIZE') then begin
       ReadNextAtom;
+      Result:=AtomIsIdentifierSaveE(20261104100000,not ExceptionOnError);
+      if not Result then exit;
+      IsSpecialize:=true;
+    end;
+    if AtomIsIdentifier then begin
+      ReadNextAtom;
+      if IsSpecialize
+      or (AtomIsChar('<')
+          and (Scanner.CompilerMode in [cmDELPHI,cmDELPHIUNICODE])) then begin
+        SpecFlags:=[ppDontCreateNodes];
+        if not ExceptionOnError then
+          Include(SpecFlags,ppDontRaiseExceptionOnError);
+        Result:=ReadSpecializeParams(SpecFlags,false,false,[]);
+        if not Result then exit;
+        ReadNextAtom;
+      end;
+    end;
     repeat
       if (CurPos.Flag in [cafRoundBracketOpen,cafEdgedBracketOpen]) then begin
         Result:=ReadTilBracketClose(ExceptionOnError);
@@ -4854,7 +4878,9 @@ begin
     Next;
     if (Scanner.CompilerMode=cmOBJFPC) and UpAtomIs('SPECIALIZE') then begin
       ReadSpecialize(ParserFlagsSpecialize, Extract,Copying,Attr);
-      if not(ppDontCreateNodes in ParserFlags) then
+      if not(ppDontCreateNodes in ParserFlags) and
+      (CurNode.LastChild<>nil) // avoid nil dereference in incomplete code
+      then
         LastEnd := CurNode.LastChild.EndPos;
       inc(Cnt,1);
     end
@@ -6872,16 +6898,18 @@ begin
   case UpChars[p^] of
   'C': if UpAtomIs('CLASS') then exit(true);
   'F': if UpAtomIs('FUNCTION') then exit(true);
-  'S': if UpAtomIs('STRICT') then exit(true);
-  'P':
-    case UpChars[p[1]] of
-    'R':
-      case UpChars[p[2]] of
-      'I': if UpAtomIs('PRIVATE') then exit(true);
-      'O': if UpAtomIs('PROTECTED') or UpAtomIs('PROCEDURE') then exit(true);
-      end;
-    'U': if UpAtomIs('PUBLIC') or UpAtomIs('PUBLISHED') then exit(true);
+  'S': if UpAtomIs('STRICT') then
+    begin
+      ReadNextAtom;
+      if (GetAtom='PRIVATE') or (GetAtom='PROTECTED') then
+        begin
+          UndoReadNextAtom;
+          exit(true);
+        end;
+      UndoReadNextAtom;
     end;
+  
+  'P': if UpAtomIs('PROCEDURE') then exit(true);
   'T': if UpAtomIs('TYPE') then exit(true);
   'V': if UpAtomIs('VAR') then exit(true);
   end;

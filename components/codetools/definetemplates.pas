@@ -4003,7 +4003,7 @@ begin
     Result:=Result+'wasm32'
   else
     Result:='fpc';
-  Result:=Result+ExeExt;
+  Result:=Result+GetExeExt;
 end;
 
 procedure GetTargetProcessors(const TargetCPU: string; aList: TStrings);
@@ -4272,7 +4272,7 @@ begin
 
   // dcc*.exe
   if LazStartsText('dcc',ShortFilename)
-  and ( (ExeExt='') or FilenameExtIs(Filename,ExeExt) )
+    and ((GetExeExt='') or FilenameExtIs(Filename,GetExeExt))
   then
     exit(pcDelphi);
 
@@ -4307,7 +4307,7 @@ begin
 
   // dcc*.exe
   if (CompareFilenames(LeftStr(ShortFilename,3),'dcc')=0)
-  and ( (ExeExt='') or FilenameExtIs(AFilename,ExeExt) )
+    and ((GetExeExt='') or FilenameExtIs(AFilename,GetExeExt))
   then begin
     Kind:=pcDelphi;
     exit(true);
@@ -4375,7 +4375,7 @@ begin
 
   // allow ppcxxx.exe
   if (LazStartsText('ppc',ShortFilename))
-  and ( (ExeExt='') or FilenameExtIs(AFilename,ExeExt) )
+    and ((GetExeExt='') or FilenameExtIs(AFilename,GetExeExt))
   then
     exit(true);
 

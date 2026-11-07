@@ -11,6 +11,8 @@
    ./testcodetools --suite=TestFindDeclaration_ObjCCategory
    ./testcodetools --suite=TestFindDeclaration_Generics
    ./testcodetools --suite=TestFindDeclaration_FileAtCursor
+   ./testcodetools --suite=TestFindDeclaration_InComment
+   ./testcodetools --suite=TestFindReferences_InComment
    ./testcodetools --suite=TestFindDeclarationPathAt_Basic
    ./testcodetools --suite=TestFindDeclarationPathAt_Generics
    ./testcodetools --suite=TestFindDeclarationPathAt_UnitPrefix
@@ -159,6 +161,9 @@ type
     procedure CheckDeclarationPath(const MarkerName, aPath, ExpectedPath: string;
       Flags: TFindSmartFlags = []; ExpectedDesc: TCodeTreeNodeDesc = ctnNone;
       ExpectedGenParams: integer = -1);
+    procedure CheckFindDeclarationInComment(const SearchText: string;
+      IdentOffset: integer; const ExpectedPath: string;
+      Flags: TFindSmartFlags = DefaultFindSmartFlags+[fsfSearchInComments]);
     procedure FindDeclarations(Filename: string; ExpandFile: boolean = true);
     procedure FindDeclarations(aCode: TCodeBuffer);
     procedure TestFiles(Directory: string; ADefaultFileMask: String = '');
@@ -237,6 +242,8 @@ type
     procedure TestFindDeclaration_PointerForwardVsUses;
     procedure TestFindDeclaration_AutoDeref;
     procedure TestFindDeclaration_Variant;
+    procedure TestFindDeclaration_InComment;
+    procedure TestFindReferences_InComment;
 
     // darwin objc
     procedure TestFindDeclaration_ObjCClass;
@@ -259,6 +266,8 @@ type
     procedure TestFindDeclaration_GenericsDelphi_PublicProcType;
     procedure TestFindDeclaration_GenericsDelphi_MultiGenParams;
     procedure TestFindDeclaration_GenericsDelphi_MethodConstraints;
+    procedure TestFindDeclaration_GenericsDelphi_WithGenMethod;
+    procedure TestFindDeclaration_GenericsObjFpc_WithGenMethod;
 
     // FindDeclarationPathAt
     procedure TestFindDeclarationPathAt_Basic;
@@ -266,6 +275,9 @@ type
     procedure TestFindDeclarationPathAt_UnitPrefix;
     procedure TestFindDeclarationPathAt_Flags;
 
+    // Context-based-keyword identifiers
+    procedure TestFindDeclaration_ContextBasedKeywordIdentifier;
+    
     // ampersands
     procedure TestFindDeclaration_Ampersand;
     procedure TestFindDeclaration_Ampersand_UnitName;
@@ -610,6 +622,47 @@ begin
         +' Path="'+aPath+'" expected '+IntToStr(ExpectedGenParams)
         +' generic parameters, but found '+IntToStr(i));
     end;
+  end;
+end;
+
+procedure TCustomTestFindDeclaration.CheckFindDeclarationInComment(
+  const SearchText: string; IdentOffset: integer; const ExpectedPath: string;
+  Flags: TFindSmartFlags);
+// Test CodeToolBoss.FindDeclaration at an identifier in a comment or in
+// disabled code, which can not be marked with the {declaration:} markers.
+// SearchText must be unique in Code, the cursor is placed at
+// SearchText start + IdentOffset.
+// An empty ExpectedPath means: expect failure.
+var
+  Src, FoundPath: String;
+  p, X, Y, NewX, NewY, NewTopLine, BlockTopLine, BlockBottomLine,
+    FoundCleanPos: Integer;
+  NewCode: TCodeBuffer;
+  FoundTool: TFindDeclarationTool;
+  FoundNode: TCodeTreeNode;
+begin
+  Src:=Code.Source;
+  p:=Pos(SearchText,Src);
+  if p<1 then
+    Fail('CheckFindDeclarationInComment missing "'+SearchText+'"');
+  if PosEx(SearchText,Src,p+1)>0 then
+    Fail('CheckFindDeclarationInComment not unique "'+SearchText+'"');
+  Code.AbsoluteToLineCol(p+IdentOffset,Y,X);
+  FoundPath:='';
+  if CodeToolBoss.FindDeclaration(Code,X,Y,NewCode,NewX,NewY,NewTopLine,
+    BlockTopLine,BlockBottomLine,Flags)
+  then begin
+    FoundTool:=CodeToolBoss.GetCodeToolForSource(NewCode,true,true) as TFindDeclarationTool;
+    FoundTool.CaretToCleanPos(CodeXYPosition(NewX,NewY,NewCode),FoundCleanPos);
+    FoundNode:=FoundTool.FindDeepestNodeAtPos(FoundCleanPos,true);
+    FoundPath:=NodeAsPath(FoundTool,FoundNode);
+  end;
+  if LowerCase(FoundPath)<>LowerCase(ExpectedPath) then begin
+    WriteSource(CodeXYPosition(X,Y,Code));
+    Fail('FindDeclaration at '+IntToStr(Y)+','+IntToStr(X)
+      +' "'+copy(Src,p,IdentOffset)+'|'+copy(Src,p+IdentOffset,length(SearchText)-IdentOffset)+'"'
+      +' expected "'+ExpectedPath+'", but found "'+FoundPath+'"'
+      +' Error="'+CodeToolBoss.ErrorMessage+'"');
   end;
 end;
 
@@ -1862,6 +1915,64 @@ begin
   FindDeclarations(Code);
 end;
 
+procedure TTestFindDeclaration.TestFindDeclaration_GenericsDelphi_WithGenMethod;
+begin
+  StartProgram;
+  Add([
+  '{$mode delphi}',
+  'type',
+  '  TWing = class',
+  '    Size: word;',
+  '  end;',
+  '  TBird = class',
+  '    function GetWing<T>: TWing;',
+  '    procedure Fly;',
+  '  end;',
+  'function TBird.GetWing<T>: TWing;',
+  'begin',
+  'end;',
+  'procedure TBird.Fly;',
+  'begin',
+  '  with GetWing<Boolean> do',
+  '    Size{declaration:TWing.Size}:=3;',
+  'end;',
+  'var Bird: TBird;',
+  'begin',
+  '  with Bird.GetWing<Boolean> do',
+  '    Size{declaration:TWing.Size}:=4;',
+  'end.']);
+  FindDeclarations(Code);
+end;
+
+procedure TTestFindDeclaration.TestFindDeclaration_GenericsObjFpc_WithGenMethod;
+begin
+  StartProgram;
+  Add([
+  '{$mode objfpc}',
+  'type',
+  '  TWing = class',
+  '    Size: word;',
+  '  end;',
+  '  TBird = class',
+  '    generic function GetWing<T>: TWing;',
+  '    procedure Fly;',
+  '  end;',
+  'generic function TBird.GetWing<T>: TWing;',
+  'begin',
+  'end;',
+  'procedure TBird.Fly;',
+  'begin',
+  '  with specialize GetWing<Boolean> do',
+  '    Size{declaration:TWing.Size}:=3;',
+  'end;',
+  'var Bird: TBird;',
+  'begin',
+  '  with Bird.specialize GetWing<Boolean> do',
+  '    Size{declaration:TWing.Size}:=4;',
+  'end.']);
+  FindDeclarations(Code);
+end;
+
 procedure TTestFindDeclaration.TestFindDeclaration_ForIn;
 begin
   FindDeclarations('moduletests/fdt_for_in.pas');
@@ -3037,6 +3148,86 @@ begin
   FindDeclarations(Code);
 end;
 
+procedure TTestFindDeclaration.TestFindDeclaration_InComment;
+begin
+  StartProgram;
+  Add([
+  'type',
+  '  TWing = record',
+  '    Size: word;',
+  '  end;',
+  '  TBird = class',
+  '    Wing: TWing;',
+  '    procedure Fly;',
+  '  end;',
+  'var',
+  '  b: TBird;',
+  '  Items: array of TBird;',
+  '  s: string;',
+  '{ see TBird.Fly }',
+  'procedure TBird.Fly;',
+  'var',
+  '  Speed: word;',
+  'begin',
+  '  // Speed and Items[0].Wing.Size',
+  '  (* b *)',
+  'end;',
+  'begin',
+  '  {$IFDEF Undefined}',
+  '  b.Wing.Size:=3; { TBird } Items[0].Fly; {$IFDEF TBird}{$ENDIF}',
+  '  s:=''b'';',
+  '  {$ELSE}',
+  '  b.Fly;',
+  '  {$ENDIF}',
+  '  {$IFNDEF Undefined}',
+  '  b.Fly;',
+  '  {$ELSE}',
+  '  b.Wing.Size:=4;',
+  '  {$ENDIF}',
+  'end.']);
+
+  // comments
+  CheckFindDeclarationInComment('see TBird.Fly',4,'TBird');
+  CheckFindDeclarationInComment('see TBird.Fly',10,'TBird.Fly');
+  CheckFindDeclarationInComment('// Speed and',3,'TBird.Fly.Speed');
+  CheckFindDeclarationInComment('Items[0].Wing.Size',14,'TWing.Size');
+  CheckFindDeclarationInComment('(* b *)',3,'b');
+
+  // disabled code
+  CheckFindDeclarationInComment('b.Wing.Size:=3',7,'TWing.Size');
+  CheckFindDeclarationInComment('{ TBird }',2,'TBird');
+  CheckFindDeclarationInComment('Items[0].Fly',9,'TBird.Fly');
+  CheckFindDeclarationInComment('b.Wing.Size:=4',2,'TBird.Wing');
+  // directive in disabled code
+  CheckFindDeclarationInComment('{$IFDEF TBird}',8,'');
+  // string constant in disabled code
+  CheckFindDeclarationInComment('''b''',1,'');
+
+  // without fsfSearchInComments
+  CheckFindDeclarationInComment('see TBird.Fly',10,'',DefaultFindSmartFlags);
+  CheckFindDeclarationInComment('b.Wing.Size:=3',7,'',DefaultFindSmartFlags);
+end;
+
+procedure TTestFindDeclaration.TestFindReferences_InComment;
+begin
+  StartProgram;
+  Add([
+  'type',
+  '  TBird = class',
+  '    Size{findrefs:C,5,7;12,13;45,13;12,15;44,15}: word;',
+  '    Wing{findrefs:5,8;27,13}: word;',
+  '  end;',
+  'var',
+  '  Items: array of TBird;',
+  'begin',
+  '  Items[0].Size:=Items[0].Wing; // Items[0].Size Items[0].Wing',
+  '  {$IFDEF Undefined}',
+  '  Items[1].Size:=Items[1].Wing; { Items[2].Size }',
+  '  {$ENDIF}',
+  'end.']);
+  FindDeclarations(Code);
+end;
+
 procedure TTestFindDeclaration.TestFindDeclarationPathAt_Basic;
 begin
   StartProgram;
@@ -3282,6 +3473,49 @@ begin
                        [fsfSkipPropertyWithoutType]);
   CheckDeclarationPath('start','TAnimal.Speed','TBase.Speed',
                        [fsfFindMainDeclaration,fsfSkipPropertyWithoutType]);
+end;
+
+
+procedure TTestFindDeclaration.TestFindDeclaration_ContextBasedKeywordIdentifier;
+begin
+  StartProgram;
+  Add([
+  'type',
+  '  TFoo = class',
+  '  public type',
+  '    &protected = integer;',
+  '  private',
+  '    function published(private: protected): protected;',
+  '  public',
+  '    a, public,strict, virtual, inline, deprecated: protected;',
+  '',
+  '    procedure x;',
+  '    property p1[private: protected{declaration:tfoo.protected}]: protected read a;',
+  '    property p2: protected{declaration:tfoo.protected} read a;',
+  '    property p3: protected read public{declaration:tfoo.public};',
+  '    property p4: protected read strict{declaration:tfoo.strict};',
+  '    property p5: protected read virtual{declaration:tfoo.virtual};',
+  '    property p6: protected read inline{declaration:tfoo.inline};',
+  '    property p7: protected read deprecated{declaration:tfoo.deprecated};',
+  '  end;',
+  '',
+  'procedure TFoo.x;',
+  'var',
+  '  ea: Integer;',
+  'begin',
+  '  ea :=public{declaration:tfoo.public};',
+  'end;',
+  '',
+  'function TFoo.published(private: protected): protected{declaration:tfoo.protected};',
+  'begin',
+  '',
+  'end;',
+  '',
+  'begin',
+  '',
+  'end.',
+  '']);
+  FindDeclarations(Code);
 end;
 
 procedure TTestFindDeclaration.TestFindDeclaration_Ampersand;

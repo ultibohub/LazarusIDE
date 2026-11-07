@@ -1,4 +1,4 @@
-{ Copyright (C) 2013 Mattias Gaertner
+{ Copyright (C) 2026 Mattias Gaertner
 
   This source is free software; you can redistribute it and/or modify it under
   the terms of the GNU General Public License as published by the Free
@@ -48,7 +48,8 @@ uses
   TestBasicCodetools, TestCTRangeScan, TestPascalParser, TestMethodJumpTool,
   TestStdCodetools, TestFindDeclaration, TestIdentCompletion, TestCompleteBlock,
   TestRefactoring, TestCodeCompletion, TestCompReaderWriterPas,
-  TestCTPas2js, TestChangeDeclaration, TestLFMTrees, TestDesignerFormTools;
+  TestCTPas2js, TestChangeDeclaration, TestLFMTrees, TestDesignerFormTools,
+  TestCTDiffPatch;
 
 const
   ConfigFilename = 'codetools.config';

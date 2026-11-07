@@ -49,6 +49,22 @@ msgstr "Сообщение исключения: %s"
 msgid "%s     Failures: %s"
 msgstr "%s     Неудач: %s"
 
+#: strtestcaseopts.rsfind
+msgid "Find:"
+msgstr "Найти:"
+
+#: strtestcaseopts.rsfindhint
+msgid "Highlight tests containing this text"
+msgstr "Подсветить тесты, содержащие этот текст"
+
+#: strtestcaseopts.rsfindnext
+msgid "Find next"
+msgstr "Найти следующее"
+
+#: strtestcaseopts.rsfindprevious
+msgid "Find previous"
+msgstr "Найти предыдущее"
+
 #: strtestcaseopts.rsmessage
 #, object-pascal-format
 msgid "Message: %s"
@@ -79,12 +95,17 @@ msgstr "Порт сервера"
 msgid "Test Insight"
 msgstr "Сведения о тестировании"
 
+#: strtestcaseopts.rstestprojectstopped
+#, object-pascal-format
+msgid "Test project %s stopped."
+msgstr "Исполнение тестового проекта %s остановлено."
+
 #: strtestcaseopts.sactcheckall
-msgid "Select all tests"
+msgid "Check all tests"
 msgstr "Выбрать все тесты"
 
 #: strtestcaseopts.sactcheckcurrentsuite
-msgid "Select current suite"
+msgid "Check current suite"
 msgstr "Выбрать текущий набор"
 
 #: strtestcaseopts.sactcloseform
@@ -109,27 +130,35 @@ msgid "Copy message to clipboard"
 msgstr "Копировать сообщение в буфер обмена"
 
 #: strtestcaseopts.sactrunaction
-msgid "&Run all"
-msgstr "&Запустить все"
+msgid "&Run checked tests"
+msgstr "&Запустить выбранные тесты"
 
 #: strtestcaseopts.sactrunactionh
 msgid "Run all checked tests"
 msgstr "Запустить все выбранные тесты"
 
 #: strtestcaseopts.sactrunhighlightedtest
-msgid "Run selected"
-msgstr "Запустить выбранный"
+msgid "Run highlighted test"
+msgstr "Запустить подсвеченный тест"
 
 #: strtestcaseopts.sactrunhighlightedtesth
-msgid "Run selected test"
-msgstr "Запустить выбранный тест"
+msgid "Run only the highlighted test or suite"
+msgstr "Запустить только подсвеченный тест либо набор"
+
+#: strtestcaseopts.sactstop
+msgid "Stop"
+msgstr "Остановить"
+
+#: strtestcaseopts.sactstoph
+msgid "Stop the running test project"
+msgstr "Остановить исполнение тестового проекта"
 
 #: strtestcaseopts.sactuncheckall
-msgid "Deselect all tests"
+msgid "Uncheck all tests"
 msgstr "Снять выбор со всех тестов"
 
 #: strtestcaseopts.sactuncheckcurrentsuite
-msgid "Deselect current suite"
+msgid "Uncheck current suite"
 msgstr "Снять выбор с текущего набора"
 
 #: strtestcaseopts.sbtncreate

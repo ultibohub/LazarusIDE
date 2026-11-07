@@ -8251,10 +8251,10 @@ var
   r: integer;
   CheckingView: TExtToolView;
 begin
+  Result:=mrCancel;
   if ToolStatus<>itNone then begin
     IDEMessageDialog(lisNotNow,lisYouCanNotBuildLazarusWhileDebuggingOrCompiling,
                      mtError,[mbCancel]);
-    Result:=mrCancel;
     exit;
   end;
 
@@ -8267,7 +8267,7 @@ begin
   // clear old error lines
   SourceEditorManager.ClearErrorLines;
 
-  Result:=DoSaveAll([sfDoNotSaveVirtualFiles]);
+  Result:=DoSaveAll([]);
   if Result<>mrOk then begin
     DebugLn('Error: (lazarus) TMainIDE.DoBuildLazarus: failed because saving failed');
     exit;
@@ -8635,7 +8635,7 @@ begin
       exit;
     end;
     if HasShebang then
-      DefRunCommand:='instantfpc'+ExeExt+' '+Filename
+      DefRunCommand:='instantfpc'+GetExeExt+' '+Filename
     else
       DefRunCommand:=IDEDirDefaultRunCommand;
     RunCommand:=GetIDEStringDirective(DirectiveList,
@@ -9066,7 +9066,16 @@ begin
         if CurUnit=nil then continue;
 
         if (Reload=mrOk)
-        and (AIgnoreList.IndexOf(CurCode)<0) then begin
+        and (AIgnoreList.IndexOf(CurCode)<0)
+        and (not FileExistsCached(CurCode.Filename))
+        and (CurUnit.OpenEditorInfoCount > 0)
+        and (not CurUnit.IsMainUnit) then begin
+          // file vanished on disk -> close all editors, discarding changes
+          Result:=DoCloseEditorFile(CurUnit.Filename,[]);
+          if Result=mrAbort then exit;
+        end else if (Reload=mrOk)
+        and (AIgnoreList.IndexOf(CurCode)<0)
+        and FileExistsCached(CurCode.Filename) then begin
           // revert
           if CurUnit.OpenEditorInfoCount > 0 then
           begin
@@ -9107,7 +9116,8 @@ begin
         // designer form
         if (Reload=mrOk)
             and (AIgnoreList.IndexOf(CurCode)<0)
-            and (AIgnoreList.IndexOf(CurUnit.SourceLFM)<0) then
+            and (AIgnoreList.IndexOf(CurUnit.SourceLFM)<0)
+            and FileExistsCached(CurCode.Filename) then
         begin
           // revert form
           LFMLoaded.Add(CurUnit.SourceLFM);
@@ -9122,7 +9132,7 @@ begin
 
       // update code filedates
       for i:=0 to BufferList.Count-1 do
-        CurCode.MakeFileDateValid;
+        TCodeBuffer(BufferList[i]).MakeFileDateValid;
     end;
 
     // reload packages
@@ -11206,6 +11216,8 @@ begin
   FindFlags := DefaultFindSmartFlags;
   if CodeToolsOpts.SkipForwardDeclarations then
     Include(FindFlags, fsfSkipClassForward);
+  if CodeToolsOpts.FindDeclarationInComments then
+    Include(FindFlags, fsfSearchInComments);
   if CodeToolBoss.FindDeclaration(ActiveUnitInfo.Source,
     LogCaretXY.X, LogCaretXY.Y, NewSource, NewX, NewY, NewTopLine, BlockTopLine, BlockBottomLine, FindFlags )
   then begin

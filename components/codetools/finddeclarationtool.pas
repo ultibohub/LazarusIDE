@@ -569,6 +569,11 @@ type
     GenericParamName: string; // <T> -> T
     SpecializedType: string; // TAnyPrefix.TypeName
   end;
+  TTypesPair = record
+    GenericType: string; // name
+    SpecializedType: string; // name
+  end;
+
 
   { TSpecializeParamsDictionary }
 
@@ -579,6 +584,7 @@ type
     function KeyToSpecialized(GenericParamName: string): string;
     function GetVerse(GenericParamName: string): integer; // -1 when not present
     function SubstituteGenericItems(GenExpr: string; SpecializedType: string): string;
+      // note: SpecializedType as "GenericTypeName=SpecalizedTypeName" e.g GenType=MySpecType
     function Used: boolean;
     function Count: integer;
     procedure Clear;
@@ -611,6 +617,7 @@ type
     OnIdentifierFound: TOnIdentifierFound;
     IdentifierTool: TFindDeclarationTool;
     FoundProc: PFoundProc;
+    Specialized: TTypesPair;
   end;
 
   { TFindDeclarationParams
@@ -647,7 +654,8 @@ type
     FKnownIdentSpecializeParamCntValid: boolean;
     FIdentifierGenParamCount: integer; // -1 = derive from IdentifierNode
     FSpecializedType: string;
-    FSpecializedClass: string;
+    FSpecializedGeneric: string;
+
     procedure ClearFoundProc;
     procedure FreeFoundProc(aFoundProc: PFoundProc; FreeNext: boolean);
     procedure RemoveFoundProcFromList(aFoundProc: PFoundProc);
@@ -671,6 +679,7 @@ type
     procedure ClearInput;
   public
     // input parameters:
+
     Flags: TFindDeclarationFlags;
     Identifier: PChar;
     IdentifierNode: TCodeTreeNode; // used for specialize to have count of gen-params
@@ -715,8 +724,8 @@ type
     function GetHelpers(HelperKind: TFDHelpersListKind; CreateIfNotExists: boolean = false): TFDHelpersList;
     function IdentSpecializeNodeParamCount: integer;
     property KnownIdentifierLength: integer read FKnownIdentifierLength;
-    property SpecializedTypeName: string read FSpecializedType;
-    property SpecializedClassName: string read FSpecializedClass;
+    property SpecializedType: string read FSpecializedType;
+    property SpecializedGeneric: string read FSpecializedGeneric;
   end;
   
   
@@ -731,7 +740,8 @@ type
                             // for procedure: search the corresponding of the forward declaration
     fsfSearchSourceName, // if searching for a unit name, return the source name node
     fsfSkipClassForward, // when a forward class was found, jump further to the class
-    fsfSkipPropertyWithoutType
+    fsfSkipPropertyWithoutType,
+    fsfSearchInComments // if the cursor is in a comment or in disabled code, search the identifier there
     );
   TFindSmartFlags = set of TFindSmartFlag;
 const
@@ -968,6 +978,8 @@ type
       DefaultResultNode: TCodeTreeNode = nil): boolean;
     function FindDeclarationOfIdentAtParam(
       Params: TFindDeclarationParams; DefaultResultNode: TCodeTreeNode = nil): boolean;
+    function FindCommentContextNode(Node: TCodeTreeNode;
+      CleanPos: integer): TCodeTreeNode;
     function IdentifierIsDefined(const IdentAtom: TAtomPosition;
       ContextNode: TCodeTreeNode; Params: TFindDeclarationParams): boolean;
     function FindContextNodeAtCursor(
@@ -2174,6 +2186,7 @@ end;
 
 function TSpecializeParamsDictionary.SubstituteGenericItems(GenExpr: string;
   SpecializedType: string): string;
+// note: SpecializedType as "GenericTypeName=SpecalizedTypeName" e.g GenType=MySpecType
 var
   List: TStringList;
   i,j,k: integer;
@@ -2182,10 +2195,12 @@ begin
   Result:=GenExpr;
   if GenExpr='' then exit;
   if Count=0 then exit;
-  i:=Pos('.',GenExpr);
-  if (i>0) and (SpecializedType<>'') then begin
+  if CompareIdentifiers(PChar(GenExpr),PChar(SpecializedType))=0 then begin
+    i:=Pos('=',SpecializedType);
+    if i<1 then exit;
+    delete(SpecializedType,1,i);
     delete(GenExpr,1,i-1);
-    insert(SpecializedType,GenExpr,0); // ?1
+    GenExpr:=SpecializedType+GenExpr;
   end;
 
   i:=1;
@@ -2609,9 +2624,69 @@ var
       BlockBottomLine := NewSkipBlockBottomLine;
     end;
   end;
+
+  function CursorInDirectiveOrString(CommentStart, CommentEnd: integer): boolean;
+  // CleanCursorPos is in the comment CommentStart..CommentEnd (outer bounds).
+  // Returns true if CleanCursorPos is in a directive, or in disabled code
+  // (codetools skip comment {#3 #3}) in a directive or string constant.
+  var
+    p, EndP, q: integer;
+    IsComment: boolean;
+  begin
+    Result:=false;
+    p:=CommentStart;
+    if (Src[p]='{') and (p<SrcLen) and (Src[p+1]='$') then
+      exit(true);
+    if (Src[p]='(') and (p+2<=SrcLen) and (Src[p+1]='*') and (Src[p+2]='$') then
+      exit(true);
+    if (Src[p]<>'{') or (p>=SrcLen) or (Src[p+1]<>#3) then
+      exit; // normal comment
+    // disabled code
+    inc(p,2);
+    EndP:=CommentEnd-2; // in front of #3}
+    while p<EndP do begin
+      case Src[p] of
+      '{','(','/':
+        begin
+          IsComment:=(Src[p]='{')
+                     or ((Src[p]='(') and (Src[p+1]='*'))
+                     or ((Src[p]='/') and (Src[p+1]='/'));
+          if IsComment then begin
+            q:=FindCommentEnd(Src,p,Scanner.NestedComments);
+            if q>EndP then
+              q:=EndP;
+            if (CleanCursorPos>=p) and (CleanCursorPos<q) then begin
+              // in a comment inside disabled code
+              if Src[p]='{' then
+                Result:=Src[p+1]='$'
+              else if Src[p]='(' then
+                Result:=Src[p+2]='$';
+              exit;
+            end;
+            p:=q;
+            continue;
+          end;
+        end;
+      '''':
+        begin
+          q:=p+1;
+          while (q<EndP) and (Src[q]<>'''') and not (Src[q] in [#10,#13]) do
+            inc(q);
+          if (q<EndP) and (Src[q]='''') then
+            inc(q);
+          if (CleanCursorPos>p) and (CleanCursorPos<q) then
+            exit(true);
+          p:=q;
+          continue;
+        end;
+      end;
+      inc(p);
+    end;
+  end;
+
 var
   CleanPosInFront: integer;
-  CursorAtIdentifier: boolean;
+  CursorAtIdentifier, InComment: boolean;
   IdentifierStart: PChar;
   LineRange: TLineRange;
   Params: TFindDeclarationParams;
@@ -2717,7 +2792,25 @@ begin
     Debugln;
     {$ENDIF}
 
-    if (CursorNode.Desc = ctnUseUnitNamespace) then begin
+    InComment:=false;
+    if (fsfSearchInComments in SearchSmartFlags)
+    and CleanPosIsInComment(CleanCursorPos,CursorNode.StartPos,CommentStart,CommentEnd)
+    then begin
+      // cursor in comment or disabled code
+      if CursorInDirectiveOrString(CommentStart,CommentEnd) then begin
+        {$IFDEF VerboseFindDeclarationFail}
+        debugln(['TFindDeclarationTool.FindDeclaration cursor in comment at directive or string']);
+        {$ENDIF}
+        exit;
+      end;
+      InComment:=true;
+      SkipChecks:=true;
+      CursorNode:=FindCommentContextNode(CursorNode,CleanCursorPos);
+    end;
+
+    if InComment then begin
+      // search identifier in comment in the scope of CursorNode
+    end else if (CursorNode.Desc = ctnUseUnitNamespace) then begin
       NewExprType.Desc:=xtContext;
       NewExprType.Context.Node:=CursorNode;
       NewExprType.Context.Tool:=Self;
@@ -2788,13 +2881,15 @@ begin
     GetIdentStartEndAtPosition(Src,CleanCursorPos,
                                CurPos.StartPos,CurPos.EndPos);
 
-    if AtomIsStringConstant or CleanPosIsInComment(CleanCursorPos, CursorNode.StartPos, CommentStart, CommentEnd)
+    if AtomIsStringConstant
+    or ((not InComment)
+      and CleanPosIsInComment(CleanCursorPos, CursorNode.StartPos, CommentStart, CommentEnd))
     then begin
       Result := False;
       Exit;
-    end;  
-                                 
-    if (CursorNode.Desc = ctnProperty) and 
+    end;
+
+    if (not InComment) and (CursorNode.Desc = ctnProperty) and
       (CompareIdentifiers(PChar('PROPERTY'),PChar(@Src[CurPos.StartPos]))=0) then begin
       Result := False;
       Exit;
@@ -4875,6 +4970,37 @@ begin
   end;
 end;
 
+function TFindDeclarationTool.FindCommentContextNode(Node: TCodeTreeNode;
+  CleanPos: integer): TCodeTreeNode;
+{ Node is the deepest node at CleanPos, and CleanPos is in a comment or in
+  disabled code.
+  If the comment is between the child nodes of a range node, e.g. between two
+  declarations of a program, return the node behind the comment.
+  Reason: FindDeclarationOfIdentAtParam ignores the start context node and
+  searches in its prior and parent nodes. Starting at the source node would
+  find nothing. }
+var
+  Child: TCodeTreeNode;
+begin
+  Result:=Node;
+  if (Node=nil) or (Node.FirstChild=nil) then exit;
+  if not (Node.Desc in AllSourceTypes+AllDefinitionSections+AllClassSections
+      +AllClasses+[ctnInterface,ctnImplementation,ctnProcedure,ctnRecordType])
+  then
+    exit;
+  // search the first child behind the comment
+  Child:=Node.FirstChild;
+  while (Child<>nil) and (Child.StartPos<CleanPos) do
+    Child:=Child.NextBrother;
+  if Child<>nil then
+    exit(Child);
+  // comment behind last child -> use the last declaration
+  Child:=Node.LastChild;
+  while (Child.LastChild<>nil) and (Child.Desc in AllDefinitionSections) do
+    Child:=Child.LastChild;
+  Result:=Child;
+end;
+
 function TFindDeclarationTool.FindDeclarationOfIdentAtParam(
   Params: TFindDeclarationParams; DefaultResultNode: TCodeTreeNode): boolean;
 var
@@ -5657,6 +5783,10 @@ var
       finally
         Params.Flags := OldFlags;
       end;
+      // stop at the first (newest) helper, otherwise searching the older
+      // helpers overwrites the found result, e.g. multiple ObjCCategories
+      if Result then
+        break;
     until ((HelperKind=fdhlkDelphiHelper)
       and (Params.StartTool<>nil)
       and not (cmsMultiHelpers in Params.StartTool.Scanner.CompilerModeSwitches))
@@ -6518,8 +6648,10 @@ var
         end;
         SubParams.AppendGenericParamValues(Params.GenParams);
         Params.GenParams:=SubParams.GenParams;
-        Params.FSpecializedType:=SubParams.FSpecializedType;
-        Params.FSpecializedClass:=SubParams.FSpecializedClass;
+        if Params.FSpecializedType='' then begin
+          Params.FSpecializedType:=SubParams.FSpecializedType;
+          Params.FSpecializedGeneric:=SubParams.FSpecializedGeneric;
+        end;
         exit;
       end;
 
@@ -7898,7 +8030,10 @@ var
         //here we know if it was a dotted ident and its length, put it in Params and exploit ...
         if not IsDotted then dLen:=0;
         //dLen>0  will force searching from units names first
-        Params.ContextNode:=CursorNode;
+        if IsComment then
+          Params.ContextNode:=FindCommentContextNode(CursorNode,IdentStartPos)
+        else
+          Params.ContextNode:=CursorNode;
         //debugln(['ReadIdentifier "',copy(Src,IdentStartPos,200),'"']);
         Params.SetIdentifier(Self,@Src[IdentStartPos],@CheckSrcIdentifier,dLen);
 
@@ -8050,6 +8185,45 @@ var
     end;
   end;
   
+  procedure SearchDisabledCode;
+  // StartPos is behind {#3 of a codetools skip comment
+  // read identifiers up to #3}, skip directives and string constants
+  var
+    InStrConst: Boolean;
+  begin
+    InStrConst:=false;
+    while StartPos<=MaxPos do begin
+      case Src[StartPos] of
+      #3:
+        if (StartPos<MaxPos) and (Src[StartPos+1]='}') then begin
+          inc(StartPos,2);
+          exit;
+        end;
+      '{':
+        if (not InStrConst) and (StartPos<MaxPos) and (Src[StartPos+1]='$') then
+        begin
+          // skip directive
+          while (StartPos<MaxPos) and (Src[StartPos+1]<>'}') do begin
+            if (Src[StartPos+1]=#3) and (StartPos+1<MaxPos)
+            and (Src[StartPos+2]='}') then
+              break; // end of disabled code
+            inc(StartPos);
+          end;
+        end;
+      'a'..'z','A'..'Z','_','&':
+        if not InStrConst then begin
+          ReadIdentifier(true);
+          continue;
+        end;
+      '''':
+        InStrConst:=not InStrConst;
+      #10,#13:
+        InStrConst:=false;
+      end;
+      inc(StartPos);
+    end;
+  end;
+
   procedure SearchIdentifiers;
   var
     CommentLvl: Integer;
@@ -8064,16 +8238,19 @@ var
         begin
           inc(StartPos);
           if (StartPos<=MaxPos) and (Src[StartPos]=#3) then begin
-            // codetools skip comment {#3 #3}
+            // codetools skip comment {#3 #3} (disabled code)
             inc(StartPos);
-            while (StartPos<=MaxPos) do begin
-              if (Src[StartPos]=#3) and (StartPos<MaxPos) and (Src[StartPos+1]='}')
-              then begin
-                inc(StartPos,2);
-                break;
+            if SkipComments then begin
+              while (StartPos<=MaxPos) do begin
+                if (Src[StartPos]=#3) and (StartPos<MaxPos) and (Src[StartPos+1]='}')
+                then begin
+                  inc(StartPos,2);
+                  break;
+                end;
+                inc(StartPos);
               end;
-              inc(StartPos);
-            end;
+            end else
+              SearchDisabledCode;
           end else begin
             // pascal comment {}
             CommentLvl:=1;
@@ -11713,6 +11890,7 @@ var
       if CurAtom.StartPos>=EndPos then begin
         IsIdentEndOfVar:=iieovYes;
       end else if CurAtom.Flag=cafWord then begin
+        MoveCursorToCleanPos(CurAtom.EndPos);
         ReadNextAtom;
         if AtomIsChar('(') then begin
           ReadTilBracketClose(true);
@@ -12171,7 +12349,7 @@ var
   begin
     Result:=false;
     if CurAtom.Flag<>cafWord then exit;
-    Identifier:=GetAtom;
+    Identifier:=GetAtom(CurAtom);
     Params.Flags := Params.Flags - [fdfExceptionOnNotFound];
 
     if (CurAtom.EndPos-CurAtom.StartPos<length('Attribute'))
@@ -12208,17 +12386,14 @@ var
     IdentFound:=false;
     IsStart:=ExprType.Desc=xtNone;
     IsEnd:=IsIdentifierEndOfVariable;
+
     if IsStart then begin // start context
-      if (SpecializeNode<>nil) then begin
-      // specialized type is known, only first specialization is stored in Params
-        if  (Params.FSpecializedType<>'') then
-          debugln(['ResolveIdentifier: nested specializaton to ', Params.FSpecializedType]) else
-        begin
-          Params.FSpecializedType:=
-            GetIdentifier(PChar(@Src[SpecializeNode.Parent.StartPos]));
-          Params.FSpecializedClass:=ExtractCode(SpecializeNode.FirstChild.StartPos,
-            SpecializeNode.FirstChild.EndPos,[]);
-        end;
+      if (SpecializeNode<>nil) and (Params.SpecializedType='') then begin
+        Params.FSpecializedType:=
+          GetIdentifier(PChar(@Src[SpecializeNode.Parent.StartPos]));
+        Params.FSpecializedGeneric:=
+          ExtractCode(SpecializeNode.FirstChild.StartPos,
+          SpecializeNode.FirstChild.EndPos,[]);
       end
       else if (StartNode.Desc in AllPascalStatements) then begin
         // check special identifier 'Self'
@@ -12295,6 +12470,7 @@ var
         end;
       end;
     end;
+
     // find identifier
     if not IdentFound then begin
       if not (ExprType.Desc in [xtContext,xtNone]) then
@@ -12428,7 +12604,8 @@ var
             end;
           end
           else
-          if (Params.NewNode.Desc = ctnGenericType) and (NextAtomType = vatNone)
+          if (Params.NewNode<>nil)
+             and (Params.NewNode.Desc = ctnGenericType) and (NextAtomType = vatNone)
              and (src[NextAtom.StartPos] = '<') and (NextAtom.EndPos-NextAtom.StartPos=1)
              and (Scanner.CompilerMode in [cmDELPHI, cmDELPHIUNICODE])
           then begin
@@ -12456,8 +12633,6 @@ var
           if Params.NewCodeTool.NodeIsConstructor(Params.NewNode) then begin
             // identifier is a constructor
             if (Context.Node.Desc in AllClassObjects) then begin
-              if NextAtomType = vatPoint  then
-                Exclude(StartFlags,fdfFindVariable);
               if (not IsEnd) or (not (fdfFindVariable in StartFlags)) then begin
                 // examples:
                 //   TMyClass.Create.
@@ -14594,7 +14769,7 @@ function TFindDeclarationTool.CheckSrcIdentifier(
 
     WasFunction:=false;
 
-    if TargetTool.NodeIsFunction(FoundContext.Node) then begin
+    if FoundContext.Tool.NodeIsFunction(FoundContext.Node) then begin
       // check if it is an internal function result reference by its name
       WasFunction:=true;
       TargetTool.ReadNextAtom; // read after function name
@@ -15050,8 +15225,7 @@ begin
     if UpAtomIs('SPECIALIZE') and (not (Scanner.CompilerMode in [cmDELPHI,cmDELPHIUNICODE]))
     then begin
       Node:=FindDeepestNodeAtPos(CurPos.StartPos,false);
-      //if (Node<>nil) and (Node.Desc in [ctnSpecialize,ctnSpecializeParams,ctnSpecializeParam,ctnSpecializeType]) then
-      if (Node<>nil) and (Node.Desc in [ctnSpecialize, ctnBeginBlock]) then // no nodes in begin...end code
+      if (Node<>nil) and (Node.Desc in [ctnSpecialize, ctnBeginBlock, ctnWithVariable]) then
         exit(vatSpecialize)
       else
         exit(vatIdentifier);
@@ -16515,7 +16689,18 @@ function TFindDeclarationTool.FindForInTypeAsString(TermPos: TAtomPosition;
                 SubExprType.Context.Node,true,ExprType,@AliasType, Params)
               then
                 RaiseTermHasNoIterator(20170421211210,SubExprType);
-              Result:=FindExprTypeAsString(ExprType,TermPos.StartPos,@AliasType);
+              Result:=FindExprTypeAsString(ExprType,TermPos.StartPos,@AliasType);  // old fails for specialized
+              Node:=ExprType.Context.Tool.FindClassNode(ExprType.Context.Node);
+              if (Node<>nil) and (Params.FSpecializedType<>'') then begin
+                if (AliasType.Node<>nil) and
+                (AliasType.Node.FirstChild.Desc=ctnSpecialize) then
+                  Result:= Params.FSpecializedType+'.'+ Result;
+                Result:=Params.GenParams.SpecializeDictionary.SubstituteGenericItems(
+                  Result, Params.FSpecializedGeneric+'='+Params.FSpecializedType);
+                if (Params.GenParams.ParamValuesTool.Scanner.CompilerMode = cmOBJFPC)
+                and (Pos('<',Result) > 1) then
+                  Result:='specialize '+Result;
+              end;
             end;
           ctnEnumerationType:
             begin
@@ -16834,7 +17019,7 @@ begin
   try
     // search compatible operator enumerator
     Params.ContextNode:=Node;
-    Params.Flags:=[fdfSearchInParentNodes];
+    Params.Flags:=[fdfSearchInParentNodes,fdfSearchInAncestors];
     Params.Data:=@ExprType;
     Params.SetIdentifier(Self,'Enumerator',@CheckOperatorEnumerator);
     {$IFDEF ShowForInEval}
@@ -17388,8 +17573,18 @@ begin
             ANode:= FindContext.Node;
             Result:= FindContext.Tool.ExtractNode(ANode,[]);
             stop:=Pos('>', Result);
-            if stop>1 then
+            if stop>1 then begin
               delete(Result, stop+1, length(Result));
+              if (Scanner.CompilerMode=cmOBJFPC) then begin
+                MoveCursorToCleanPos(ANode.StartPos);
+                ReadNextAtom;
+                if UpAtomIs('GENERIC') then begin
+                  delete(Result,1,8);
+                  while (Result<>'') and (Result[1]=' ')
+                    do delete(Result,1,1);
+                end;
+              end;
+            end;
           end;
         end;
 
@@ -17735,7 +17930,7 @@ begin
   FKnownIdentifierSpecializeParamCnt := -1;
   FKnownIdentSpecializeParamCntValid := false;
   FSpecializedType:='';
-  FSpecializedClass:='';
+  FSpecializedGeneric:='';
 end;
 
 constructor TFindDeclarationParams.Create(Tool: TFindDeclarationTool;
@@ -17798,6 +17993,8 @@ begin
       FFoundProcStackFirst:=FoundProc;
     FoundProc^.Owner:=Self;
   end;
+  Input.Specialized.GenericType:=FSpecializedGeneric;
+  Input.Specialized.SpecializedType:=FSpecializedType;
 end;
 
 procedure TFindDeclarationParams.Load(Input: TFindDeclarationInput;
@@ -17829,6 +18026,8 @@ begin
       end;
     end;
   end;
+  FSpecializedGeneric:=Input.Specialized.GenericType;
+  FSpecializedType:=Input.Specialized.SpecializedType;
 end;
 
 procedure TFindDeclarationParams.ClearResult(CopyCacheFlags: boolean);
@@ -18087,7 +18286,7 @@ function TFindDeclarationParams.FindGenericParamType: Boolean;
     try
       SubParams.GenParams:=GenParams;
       SubParams.ContextNode:=CtxNode;
-      SubParams.Flags:=Flags;
+      SubParams.Flags:=Flags + [fdfSearchInAncestors]; // searching ancestors cannot be skipped
 
       if (IdentNode <> nil) and not Tool.IsNodeSingleAtom(IdentNode) then begin
         SubParams.Flags:=SubParams.Flags+[fdfFindVariable];

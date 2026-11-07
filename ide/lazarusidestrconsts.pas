@@ -2260,6 +2260,9 @@ resourcestring
   dlgCursorBeyondEOL = 'Cursor beyond EOL';
   dlgSkipForwardClassDeclarations = 'Skip forward class declarations';
   dlgJumpToMethodBody = 'Jump directly to method body';
+  dlgFindDeclarationInComments = 'Find declaration in comments';
+  dlgFindDeclarationInCommentsHint = 'Find declaration also works for '
+    +'identifiers in comments and in disabled code, e.g. in an inactive {$ELSE} part';
   dlgInsertClassParts = 'Insert class parts';
   lisNewMethodsAndMembersAreInsertedAlphabeticallyOrAdd = 'New method and '
     +'member declarations in the class..end sections are inserted alphabetically or added last.';
@@ -3874,6 +3877,11 @@ resourcestring
   lisDiffDlgIgnoreIfSpaceCharsWereAdd = 'Ignore amount of space chars';
   lisDiffDlgIgnoreSpaces = 'Ignore spaces (newline chars not included)';
   lisDiffDlgOpenDiffInEditor = 'Open difference in editor';
+  lisDiffDlgShowWholeText = 'Show whole text';
+  lisDiffDlgPreviousDifference = 'Previous difference';
+  lisDiffDlgNextDifference = 'Next difference';
+  lisDiffDlgStats = '%d added, %d deleted, %d modified.';
+  lisDiffDlgNoDifferences = 'No differences.';
 
   // packages
   lisCreateNewPackage = '(Create new package)';
@@ -4164,6 +4172,8 @@ resourcestring
   lisDiskDiffSomeFilesHaveLocalChanges = 'Some files have local changes.'
     +' Either local or external changes will be overwritten.';
   lisDiskDiffReloadCheckedFilesFromDisk = 'Reload checked files from disk';
+  lisDiskDiffReloadCloseCheckedFiles = 'Reload/close checked files';
+  lisDiskDiffCloseCheckedFiles = 'Close checked files';
   lisDiskDiffIgnoreAllDiskChanges = 'Ignore all disk changes';
   
   // external tools

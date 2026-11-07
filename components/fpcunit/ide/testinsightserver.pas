@@ -91,6 +91,7 @@ Type
      procedure CreateServer;
      function ExtractResults(anArray: TJSONArray): TTestInsightResultArray;
      procedure FreeResults(Results: TTestInsightResultArray);
+     procedure FreeStartThread;
      function GetPort: Word;
      procedure HandleStartThreadTerminate(Sender: TObject);
      procedure SetBasePath(AValue: String);
@@ -163,9 +164,18 @@ Type
 
 implementation
 
-Uses ssockets;
+Const
+  // The accept loop checks every AcceptIdleTimeoutMS whether the server was stopped.
+  AcceptIdleTimeoutMS = 100;
+  // How long StopServer waits for open connections to finish.
+  StopConnectionsTimeoutMS = 5000;
 
 Type
+
+  { TFPHttpServerAccess - ConnectionCount is protected in FPC 3.2 }
+
+  TFPHttpServerAccess = class(TFPHttpServer);
+
 
   { TStartServerThread }
 
@@ -265,7 +275,8 @@ end;
 constructor TStartServerThread.Create(aServer: TFPHttpServer; aOnTerminate : TNotifyEvent);
 begin
   FServer:=aServer;
-  FreeOnTerminate:=True;
+  // TTestInsightServer waits for and frees the thread
+  FreeOnTerminate:=False;
   OnTerminate:=aOnTerminate;
   Inherited Create(False);
 end;
@@ -311,6 +322,35 @@ procedure TTransferTestResult.DoResultEvent;
 begin
   if Assigned(FEvent) then
     FEvent(FSender,FResult);
+end;
+
+Type
+
+  { TTransferLog - passes a log message from a connection thread to the main thread }
+
+  TTransferLog = Class
+  Private
+    FEvent: TTestInsightLogEvent;
+    FSender : TObject;
+    FMsgType : TInsightMessageType;
+    FMsg : String;
+  Public
+    constructor create(aEvent: TTestInsightLogEvent; aSender : TObject; aType : TInsightMessageType; const aMsg : String);
+    procedure DoLogEvent;
+  end;
+
+constructor TTransferLog.create(aEvent: TTestInsightLogEvent; aSender: TObject; aType: TInsightMessageType; const aMsg: String);
+begin
+  FEvent:=aEvent;
+  FSender:=aSender;
+  FMsgType:=aType;
+  FMsg:=aMsg;
+end;
+
+procedure TTransferLog.DoLogEvent;
+begin
+  if Assigned(FEvent) then
+    FEvent(FSender,FMsgType,FMsg);
 end;
 
 procedure TTestInsightServer.DoSetTestNames;
@@ -634,9 +674,16 @@ begin
   ErrMsg:=SThread.StartErrorMessage;
   if ErrClass<>'' then
     DoLog(imtError,'Error %s starting server: %s',[ErrClass,ErrMsg]);
-  FThread:=Nil;
+  // FThread is freed by FreeStartThread
   FServerActive:=False;
+end;
 
+procedure TTestInsightServer.FreeStartThread;
+begin
+  if not Assigned(FThread) then
+    exit;
+  FThread.WaitFor;
+  FreeAndNil(FThread);
 end;
 
 
@@ -675,9 +722,23 @@ end;
 
 
 procedure TTestInsightServer.DoLog(const aType : TInsightMessageType;const aMessage: String);
+var
+  Trans: TTransferLog;
 begin
-  If Assigned(FOnLog) then
+  If not Assigned(FOnLog) then
+    exit;
+  if GetCurrentThreadId=MainThreadID then
+    begin
     FOnLog(Self,aType,aMessage);
+    exit;
+    end;
+  // called from a connection thread: the handler usually accesses the LCL
+  Trans:=TTransferLog.Create(FOnLog,Self,aType,aMessage);
+  try
+    TThread.Synchronize(TThread.CurrentThread,@Trans.DoLogEvent);
+  finally
+    Trans.Free;
+  end;
 end;
 
 procedure TTestInsightServer.DoLog(const aType : TInsightMessageType;const Fmt: String; Args: array of const);
@@ -753,6 +814,9 @@ procedure TTestInsightServer.CreateServer;
 begin
   FServer:=TFPHttpServer.Create(Self);
   FServer.Threaded:=True;
+  // Without an idle timeout accept() blocks until the next connection,
+  // so StopServer could not stop the accept loop.
+  FServer.AcceptIdleTimeout:=AcceptIdleTimeoutMS;
   if FServerPort>0 then
     FServer.Port:=FServerPort;
 end;
@@ -767,6 +831,8 @@ procedure TTestInsightServer.StartServer;
 begin
   if FServerActive then
     exit;
+  // free the thread of a previous failed start
+  FreeStartThread;
   FServer.OnRequest:=@DoRequest;
   FServerActive:=True;
   FThread:=TStartServerThread.Create(FServer,@HandleStartThreadTerminate);
@@ -774,27 +840,41 @@ begin
 end;
 
 procedure TTestInsightServer.StopServer;
+var
+  StartTime: QWord;
+  Deactivated: Boolean;
 begin
-
   if not Assigned(FServer) then
-    exit;
-  if not FServer.Active then
     exit;
   FServer.OnRequest:=Nil;
   FServerActive:=False;
-  DoLog(imtInfo,'Deactivating server');
-  FServer.Active:=False;
-  DoLog(imtInfo,'Fake request');
-  Try
-    TInetSocket.Create('localhost',FServer.Port,10,Nil).Free;
-  except
-    on E  : Exception do
-     DoLog(imtError,'Fake request resulted in %s: %s',[E.ClassName,E.Message]);
-  end;
-  DoLog(imtInfo,'Waiting for server thread to stop');
-  If Assigned(FThread) then
-    FThread.WaitFor;
-  DoLog(imtInfo,'Server thread stopped');
+  if Assigned(FThread) then
+    begin
+    DoLog(imtInfo,'Deactivating server');
+    // The thread might not yet have activated the server, so check until it has finished.
+    // Deactivate only once: after the accept loop the thread frees the socket server.
+    Deactivated:=False;
+    while not FThread.Finished do
+      begin
+      if (not Deactivated) and FServer.Active then
+        begin
+        FServer.Active:=False;
+        Deactivated:=True;
+        end;
+      // the accept loop ends within AcceptIdleTimeoutMS,
+      // then the thread synchronizes its OnTerminate
+      CheckSynchronize(10);
+      end;
+    DoLog(imtInfo,'Waiting for server thread to stop');
+    FreeStartThread;
+    DoLog(imtInfo,'Server thread stopped');
+    end;
+  // Connection threads may wait in TThread.Synchronize, while
+  // TFPHttpServer.Destroy waits for them without calling CheckSynchronize.
+  StartTime:=GetTickCount64;
+  while (TFPHttpServerAccess(FServer).ConnectionCount>0)
+      and (GetTickCount64-StartTime<StopConnectionsTimeoutMS) do
+    CheckSynchronize(10);
 end;
 
 
