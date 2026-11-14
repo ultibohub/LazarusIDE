@@ -86,7 +86,9 @@ msgid "Backup successful: %s"
 msgstr ""
 
 #: anchordockstr.adrsbottom
-msgid "bottom"
+#, fuzzy
+#| msgid "bottom"
+msgid "Bottom"
 msgstr "basso"
 
 #: anchordockstr.adrsclose
@@ -151,10 +153,21 @@ msgstr ""
 msgid "This option allows to organize groups of windows (or all windows) into a single window. For a \"classic\" IDE with only floating windows turn the option off."
 msgstr ""
 
-#: anchordockstr.adrsenlargeside
-#, object-pascal-format
-msgid "Enlarge %s side"
-msgstr "Allarga lato a %s"
+#: anchordockstr.adrsenlargebottomside
+msgid "Enlarge bottom side"
+msgstr ""
+
+#: anchordockstr.adrsenlargeleftside
+msgid "Enlarge left side"
+msgstr ""
+
+#: anchordockstr.adrsenlargerightside
+msgid "Enlarge right side"
+msgstr ""
+
+#: anchordockstr.adrsenlargetopside
+msgid "Enlarge top side"
+msgstr ""
 
 #: anchordockstr.adrsfilledheaders
 msgid "Fill headers"
@@ -225,7 +238,9 @@ msgid "Layout restored successfully"
 msgstr ""
 
 #: anchordockstr.adrsleft
-msgid "left"
+#, fuzzy
+#| msgid "left"
+msgid "Left"
 msgstr "sinistra"
 
 #: anchordockstr.adrslocked
@@ -248,6 +263,10 @@ msgstr "nome controllo mancante"
 msgid "modal forms can not be made dockable"
 msgstr "I form modali non possono essere dockabili"
 
+#: anchordockstr.adrsmovebottom
+msgid "Move bottom"
+msgstr ""
+
 #: anchordockstr.adrsmoveheadertoleftwhenwidthheight100headeralignleft
 msgid "Move header to left when (Width/Height)*100>=HeaderAlignLeft"
 msgstr "Sposta la testata a sinistra quando (larghezza/altezza)*100 >= HeaderAlignLeft"
@@ -255,6 +274,10 @@ msgstr "Sposta la testata a sinistra quando (larghezza/altezza)*100 >= HeaderAli
 #: anchordockstr.adrsmoveheadertotopwhenwidthheight100headeraligntop
 msgid "Move header to top when (Width/Height)*100<=HeaderAlignTop"
 msgstr "Sposta la testata in alto quando (larghezza/altezza)*100 <= HeaderAlignTop"
+
+#: anchordockstr.adrsmoveleft
+msgid "Move left"
+msgstr ""
 
 #: anchordockstr.adrsmovepageleft
 msgid "Move page left"
@@ -271,6 +294,14 @@ msgstr "Sposta la pagina a destra"
 #: anchordockstr.adrsmovepagerightmost
 msgid "Move page rightmost"
 msgstr "Sposta la pagina tutta a destra"
+
+#: anchordockstr.adrsmoveright
+msgid "Move right"
+msgstr ""
+
+#: anchordockstr.adrsmovetop
+msgid "Move top"
+msgstr ""
 
 #: anchordockstr.adrsmultilinepages
 msgid "Multiline Tabs"
@@ -317,7 +348,9 @@ msgid "Restore selected layout"
 msgstr ""
 
 #: anchordockstr.adrsright
-msgid "right"
+#, fuzzy
+#| msgid "right"
+msgid "Right"
 msgstr "destra"
 
 #: anchordockstr.adrsscaleonresize
@@ -362,7 +395,9 @@ msgid "There is another dock master installed. Only one docking package can be i
 msgstr "C'è un altro pacchetto dock master installato: ci può essere un solo dock master nell'IDE, quindi dovete prima disinstallare l'attuale dockmaster %s e poi riavviare l'IDE."
 
 #: anchordockstr.adrstop
-msgid "top"
+#, fuzzy
+#| msgid "top"
+msgid "Top"
 msgstr "alto"
 
 #: anchordockstr.adrstouseanchordockingyoumustfirstuninstall

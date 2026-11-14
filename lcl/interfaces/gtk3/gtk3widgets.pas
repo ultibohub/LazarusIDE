@@ -1031,6 +1031,7 @@ type
     procedure InitializeWidget; override;
     function IsWidgetOk: Boolean; override;
     procedure SetDefault(const ADefault: Boolean);
+    procedure ApplyChildAlignment;
     procedure preferredSize(var PreferredWidth, PreferredHeight: integer; {%H-}WithThemeSpace: Boolean); override;
     property Layout: Integer read getLayout write SetLayout;
     property Margin: Integer read getMargin write SetMargin;
@@ -1154,6 +1155,7 @@ type
 
     FMDIArea: TGtk3MDIArea; //available only when LCLObject is fsMDIForm
     FWaylandIconified: Boolean;
+    FWasActive: Boolean;
 
     {Deferred resize: when SetBounds is called from within the synchronous
      WindowSizeAllocate delivery, resize() is deferred to a g_idle_add callback
@@ -5172,6 +5174,28 @@ begin
   end;
 end;
 
+function Gtk3HasActiveMappedToplevel: Boolean;
+var
+  AList, L: PGList;
+  AWin: PGtkWidget;
+begin
+  Result := False;
+  AList := gtk_window_list_toplevels;
+  L := AList;
+  while L <> nil do
+  begin
+    AWin := PGtkWidget(L^.data);
+    if Gtk3IsGtkWindow(AWin) and AWin^.get_mapped and PGtkWindow(AWin)^.is_active then
+    begin
+      Result := True;
+      break;
+    end;
+    L := L^.next;
+  end;
+  if AList <> nil then
+    g_list_free(AList);
+end;
+
 procedure TGtk3Widget.SetFocus;
 var
   TopLevel: PGtkWidget;
@@ -5237,6 +5261,48 @@ begin
           AMsgAct.Active := WA_INACTIVE;
           AMsgAct.ActiveWindow := HWND(TopWidget.LCLObject.Handle);
           TGtk3Widget(APopupForm.Handle).DeliverMessage(AMsgAct);
+        end;
+      finally
+        Gtk3WidgetSet.MsgActivationLevel := Gtk3WidgetSet.MsgActivationLevel - 1;
+      end;
+    end;
+  end;
+
+  if Assigned(LCLObject) and (Gtk3WidgetSet.MsgActivationLevel = 0) and
+    Assigned(Application) and Application.Active and
+    Gtk3IsGtkWindow(TopLevel) and TopLevel^.get_mapped and
+    not PGtkWindow(TopLevel)^.is_active and
+    not Gtk3HasActiveMappedToplevel then
+  begin
+    TopWidget := TGtk3Widget(HwndFromGtkWidget(TopLevel));
+    if (TopWidget is TGtk3Window) and Assigned(TopWidget.LCLObject) and
+      (TopWidget.LCLObject is TCustomForm) and
+      TGtk3Window(TopWidget).FWasActive and
+      not (wwiActivating in TGtk3Window(TopWidget).FStateFlags) then
+    begin
+      Gtk3WidgetSet.MsgActivationLevel := Gtk3WidgetSet.MsgActivationLevel + 1;
+      try
+        if not TCustomForm(TopWidget.LCLObject).Active then
+        begin
+          FillChar(AMsgAct{%H-}, SizeOf(AMsgAct), 0);
+          AMsgAct.Msg := LM_ACTIVATE;
+          AMsgAct.Active := WA_ACTIVE;
+          AMsgAct.ActiveWindow := HWND(TopWidget.LCLObject.Handle);
+          Include(TGtk3Window(TopWidget).FStateFlags, wwiActivating);
+          try
+            TopWidget.DeliverMessage(AMsgAct);
+          finally
+            Exclude(TGtk3Window(TopWidget).FStateFlags, wwiActivating);
+          end;
+        end;
+        FillChar(AMsg{%H-}, SizeOf(AMsg), 0);
+        AMsg.Msg := LM_SETFOCUS;
+        DeliverMessage(AMsg);
+        if HasCaret then
+        begin
+          ACaret := TGtk3Caret(g_object_get_data(PGObject(getContainerWidget),'gtk3-caret'));
+          if Assigned(ACaret) and ACaret.RespondToFocus then
+            ACaret.Show;
         end;
       finally
         Gtk3WidgetSet.MsgActivationLevel := Gtk3WidgetSet.MsgActivationLevel - 1;
@@ -14058,6 +14124,7 @@ begin
     PGtkButton(FWidget)^.set_image_position(TGtkPositionType(AValue));
     // set margin and spacing when layout is changed
     SetMargin(FMargin);
+    ApplyChildAlignment;
   end;
 end;
 
@@ -14142,9 +14209,9 @@ begin
     Result := '';
 end;
 
-procedure TGtk3Button.setText(const AValue: String);
+procedure TGtk3Button.ApplyChildAlignment;
 
-  procedure SetLabelJustifyRecursive(AWidget: PGtkWidget);
+  procedure ApplyRecursive(AWidget: PGtkWidget);
   var
     AChildList: PGList;
     AItem: PGList;
@@ -14153,7 +14220,12 @@ procedure TGtk3Button.setText(const AValue: String);
       Exit;
 
     if Gtk3WidgetIsA(AWidget, gtk_label_get_type) then
+    begin
       PGtkLabel(AWidget)^.set_justify(GetDefaultTextJustification);
+      AWidget^.set_valign(GTK_ALIGN_CENTER);
+    end else
+    if Gtk3WidgetIsA(AWidget, gtk_image_get_type) then
+      AWidget^.set_valign(GTK_ALIGN_CENTER);
 
     if Gtk3WidgetIsA(AWidget, gtk_container_get_type) then
     begin
@@ -14161,7 +14233,7 @@ procedure TGtk3Button.setText(const AValue: String);
       AItem := AChildList;
       while AItem <> nil do
       begin
-        SetLabelJustifyRecursive(PGtkWidget(AItem^.data));
+        ApplyRecursive(PGtkWidget(AItem^.data));
         AItem := AItem^.next;
       end;
       g_list_free(AChildList);
@@ -14169,10 +14241,17 @@ procedure TGtk3Button.setText(const AValue: String);
   end;
 
 begin
+  if not IsWidgetOk then
+    Exit;
+  ApplyRecursive(FWidget);
+end;
+
+procedure TGtk3Button.setText(const AValue: String);
+begin
   if IsWidgetOk then
   begin
     {%H-}PGtkButton(FWidget)^.set_label(PgChar({%H-}ReplaceAmpersandsWithUnderscores(AValue)));
-    SetLabelJustifyRecursive(FWidget);
+    ApplyChildAlignment;
     if LCLObject.AutoSize then
     begin
       LCLWidth := 0;
@@ -15169,11 +15248,17 @@ begin
   if Gtk3X11ActiveWindowIsOurs then
   begin
     if not Application.Active then
+    begin
       Application.IntfAppActivate;
+      Gtk3WidgetSet.AppRestoreStayOnTopFlags(False);
+    end;
   end else
   begin
     if Application.Active then
+    begin
       Application.IntfAppDeactivate;
+      Gtk3WidgetSet.AppRemoveStayOnTopFlags(False);
+    end;
   end;
 end;
 {$ENDIF}
@@ -15203,6 +15288,7 @@ begin
   end;
   {$ENDIF}
   Application.IntfAppDeactivate;
+  Gtk3WidgetSet.AppRemoveStayOnTopFlags(False);
 end;
 
 procedure Gtk3StopAppFocusTimer;
@@ -16031,6 +16117,8 @@ var
   AIsActivated: Boolean;
 begin
   g_object_get(AObject, 'is-active', [@IsActive, nil]);
+  if IsActive then
+    TGtk3Window(Data).FWasActive := True;
 
   {$IFDEF GTK3DEBUGACTIVATION}
   DebugLn(['[', GetTickCount64, '] TrackWindowActivate: ', TGtk3Window(Data).LCLObject.ClassName,
@@ -16083,7 +16171,10 @@ begin
     ' AppActive=', Assigned(Application) and Application.Active]);
   {$ENDIF}
   if Assigned(Application) and not Application.Terminated and not Application.Active then
+  begin
     Application.IntfAppActivate;
+    Gtk3WidgetSet.AppRestoreStayOnTopFlags(False);
+  end;
 end;
 
 class function TGtk3Window.WindowFocusOut(AWidget: PGtkWidget; AEvent: PGdkEventFocus; AData: gpointer): gboolean; cdecl;

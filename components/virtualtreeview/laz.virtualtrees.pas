@@ -4144,7 +4144,7 @@ function GetVTClipboardFormatDescription(AFormat: TClipboardFormat): string;
 procedure RegisterVTClipboardFormat(AFormat: TClipboardFormat; TreeClass: TVirtualTreeClass; Priority: Cardinal); overload;
 function RegisterVTClipboardFormat(Description: string; TreeClass: TVirtualTreeClass; Priority: Cardinal;
   tymed: Integer = TYMED_HGLOBAL; ptd: PDVTargetDevice = nil; dwAspect: Integer = DVASPECT_CONTENT;
-  lindex: Integer = -1): Word; overload;
+  lindex: Integer = -1): TClipboardFormat; overload;
 
 // utility routines
 {$ifdef EnablePrint}
@@ -4767,7 +4767,7 @@ end;
 
 function RegisterVTClipboardFormat(Description: string; TreeClass: TVirtualTreeClass; Priority: Cardinal;
   tymed: Integer = TYMED_HGLOBAL; ptd: PDVTargetDevice = nil; dwAspect: Integer = DVASPECT_CONTENT;
-  lindex: Integer = -1): Word;
+  lindex: Integer = -1): TClipboardFormat;
 
 // Alternative method to register a certain clipboard format for a given tree class. Registration with the
 // clipboard is done here too and the assigned ID returned by the function.
@@ -14074,7 +14074,7 @@ end;
 function TBaseVirtualTree.IsDefaultNodeHeightStored: Boolean;
 begin
   {$IF LCL_FullVersion >= 1080000}
-  Result := FDefaultNodeHeight <> Scale96ToFont(DEFAULT_NODE_HEIGHT);
+  Result := FDefaultNodeHeight <> Cardinal(Scale96ToFont(DEFAULT_NODE_HEIGHT));
   {$ELSE}
   Result := FDefaultNodeHeight <> DEFAULT_NODE_HEIGHT;
   {$IFEND}
@@ -14143,7 +14143,7 @@ end;
 function TBaseVirtualTree.IsIndentStored: Boolean;
 begin
   {$IF LCL_FullVersion >= 1080000}
-  Result := FIndent <> Scale96ToFont(DEFAULT_INDENT);
+  Result := FIndent <> Cardinal(Scale96ToFont(DEFAULT_INDENT));
   {$ELSE}
   Result := FIndent <> DEFAULT_INDENT;
   {$IFEND}
@@ -14342,7 +14342,6 @@ const
   LineBitsSolid: array [0..7] of Word = (0, 0, 0, 0, 0, 0, 0, 0);
 
 var
-  p9, p8, p6, p4, p2, p1: Integer;
   PatternBitmap: HBITMAP;
   Bits: Pointer;
   Size: TSize;
@@ -14376,6 +14375,9 @@ var
     ABitmap.PixelFormat := pf24Bit;
     ABitmap.Transparent := true;
     ABitmap.SetSize(Size.CX, Size.CY);
+
+    ABitmap.Canvas.Brush.Color := clFuchsia;
+    ABitmap.Canvas.FillRect(0, 0, ABitmap.Width, ABitmap.Height);
 
     if IsWinVistaOrAbove and (tsUseThemes in FStates) and (toUseExplorerTheme in FOptions.FPaintOptions) or VclStyleEnabled then
     begin
@@ -14491,6 +14493,36 @@ begin
 
   if NeedButtons then
   begin
+    {$ifdef ThemeSupport}
+    {$ifdef LCLWin}
+      // Overwrite glyph images if theme is active.
+      if ((tsUseThemes in FStates) and (Theme <> 0)) then
+      begin
+        CreateAndFillBitmap(FPlusBM);
+        CreateAndFillBitmap(FMinusBM);
+        CreateAndFillBitmap(FHotPlusBM);
+        CreateAndFillBitmap(FHotMinusBM);
+        R := Rect(0, 0, Size.cx, Size.cy);
+        DrawThemeBackground(Theme, FPlusBM.Canvas.Handle, TVP_GLYPH, GLPS_CLOSED, R, nil);
+        DrawThemeBackground(Theme, FMinusBM.Canvas.Handle, TVP_GLYPH, GLPS_OPENED, R, nil);
+        if tsUseExplorerTheme in FStates then
+        begin
+          DrawThemeBackground(Theme, FHotPlusBM.Canvas.Handle, TVP_HOTGLYPH, GLPS_CLOSED, R, nil);
+          DrawThemeBackground(Theme, FHotMinusBM.Canvas.Handle, TVP_HOTGLYPH, GLPS_OPENED, R, nil);
+        end
+        else
+        begin
+          FHotPlusBM.Canvas.Draw(0, 0, FPlusBM);
+          FHotMinusBM.Canvas.Draw(0, 0, FMinusBM);
+        end;
+        NeedButtons := false;
+      end;
+    {$endif}
+    {$endif ThemeSupport}
+  end;
+
+  if NeedButtons then
+  begin
     // box is always of odd size
     CreateAndFillBitmap(FMinusBM);
     CreateAndFillBitmap(FHotMinusBM);
@@ -14513,28 +14545,6 @@ begin
         FHotPlusBM.Canvas.Draw(0, 0, FPlusBM);
       end;
     end;
-
-    {$ifdef ThemeSupport}
-    {$ifdef LCLWin}
-      // Overwrite glyph images if theme is active.
-      if ((tsUseThemes in FStates) and (Theme <> 0)) then
-      begin
-        R := Rect(0, 0, Size.cx, Size.cy);
-        DrawThemeBackground(Theme, FPlusBM.Canvas.Handle, TVP_GLYPH, GLPS_CLOSED, R, nil);
-        DrawThemeBackground(Theme, FMinusBM.Canvas.Handle, TVP_GLYPH, GLPS_OPENED, R, nil);
-        if tsUseExplorerTheme in FStates then
-        begin
-          DrawThemeBackground(Theme, FHotPlusBM.Canvas.Handle, TVP_HOTGLYPH, GLPS_CLOSED, R, nil);
-          DrawThemeBackground(Theme, FHotMinusBM.Canvas.Handle, TVP_HOTGLYPH, GLPS_OPENED, R, nil);
-        end
-        else
-        begin
-          FHotPlusBM.Canvas.Draw(0, 0, FPlusBM);
-          FHotMinusBM.Canvas.Draw(0, 0, FMinusBM);
-        end;
-      end;
-    {$endif}
-    {$endif ThemeSupport}
   end;
 
   if NeedLines then
@@ -24416,7 +24426,7 @@ begin
           Details.Part := 0;
           Details.State := 0;
         end;
-        ThemeServices.DrawElement(Canvas.Handle, Details, R);
+        ThemeServices.DrawElementForPPI(Canvas.Handle, Details, R, Font.PixelsPerInch);
         {$ifdef USE_DELPHICOMPAT}
         if Index in [21..24] then
           with UtilityImages do
@@ -30738,6 +30748,9 @@ begin
         NodeBitmap.Width := Round(PaintWidth * ScaleFactor);
         NodeBitmap.Height := 1;
         LCLIntf.SetCanvasScaleFactor(NodeBitmap.Canvas.Handle, ScaleFactor);
+        // sync the buffer canvas font resolution with the target, otherwise
+        // TFont.Assign downconverts the font to Screen.PixelsPerInch:
+        NodeBitmap.Canvas.Font.PixelsPerInch := TargetCanvas.Font.PixelsPerInch;
 
         // Make sure the buffer bitmap and target bitmap use the same transformation mode.
         {$ifndef Gtk}
@@ -34375,7 +34388,8 @@ var
   DrawFormat: Integer;
 
 begin
-  GetTextExtentPoint32(Canvas.Handle, PChar(Text), Length(Text), {%H-}Result);
+  Result := Size(0, 0);
+  GetTextExtentPoint32(Canvas.Handle, PChar(Text), Length(Text), Result);
   if vsMultiLine in Node.States then
   begin
     DrawFormat := DT_CALCRECT or DT_NOPREFIX or DT_WORDBREAK or DT_END_ELLIPSIS or DT_EDITCONTROL or AlignmentToDrawFlag[Alignment];

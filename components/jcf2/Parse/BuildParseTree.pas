@@ -69,6 +69,7 @@ type
     fiTokenCount: integer;
     procedure ChangeFirstSolidTokenType(peNewTokenType: TTokenType);
     function IsEndOfTypeSection: Boolean;
+    function IsRecordVisibility: Boolean;
     function IsProcedureHintOrDirective(aExcludeTokens: TTokenTypeSet = []): boolean;
     procedure RecogniseTypeHelper;
     procedure SplitGreaterThanOrEqual;
@@ -172,8 +173,8 @@ type
     procedure RecogniseVarDecl(aVarType: TVarType=vtNormal);
     procedure RecogniseVarExpPubDir;
     procedure RecogniseAddOp;
-    procedure RecogniseDesignator;
-    procedure RecogniseDesignatorTail;
+    procedure RecogniseDesignator(pbInFactor: boolean);
+    procedure RecogniseDesignatorTail(pbInFactor: boolean);
     procedure RecogniseExpr(const pbAllowRelop: boolean);
     procedure RecogniseExprList;
     procedure RecogniseFactor;
@@ -183,7 +184,7 @@ type
     procedure RecogniseRelOp;
     procedure RecogniseSetConstructor;
     procedure RecogniseSetElement;
-    procedure RecogniseQualId;
+    procedure RecogniseQualId(pbInFactor: boolean);
     procedure RecogniseConstantExpression;
     procedure RecogniseLiteralString;
 
@@ -1144,6 +1145,14 @@ begin
     lc.TokenType := peNewTokenType;
 end;
 
+{ "private" and the like start a section of an advanced record, but without
+  advanced records they can name a field: then a ':' or a ',' follows. }
+function TBuildParseTree.IsRecordVisibility: Boolean;
+begin
+  Result := (fcTokenList.FirstSolidTokenType in ClassVisibility + [ttStrict]) and
+    not (fcTokenList.SolidTokenType(2) in [ttColon, ttComma]);
+end;
+
 function TBuildParseTree.IsEndOfTypeSection: Boolean;
 begin
   Result := (fcTokenList.FirstSolidTokenType in (ClassVisibility +
@@ -1636,7 +1645,11 @@ begin
     Inc(liBracketLevel);
     Inc(liMaxBracketLevel);
   end;
-  Inc(liIndex);
+  { step over the token after the brackets, but not a closing bracket:
+    in "([], [x])" the "]" closes the empty set, and the comma after it
+    belongs to the outer list }
+  if not (fcTokenList.SourceTokens[liIndex].TokenType in [ttCloseBracket,ttCloseSquareBracket]) then
+    Inc(liIndex);
 
   // look forward to find the first comma or semicolon
   while True do
@@ -1705,6 +1718,15 @@ begin
     (fcTokenList.SolidTokenType(3) = ttColon) then
   begin
     RecogniseRecordConstant;
+  end
+  { an array of records, "((f: 1), (f: 2))" or "[(f: 1)]", wherever the
+    line breaks and comments fall }
+  else if (fcTokenList.FirstSolidTokenType in [ttOpenBracket,ttOpenSquareBracket]) and
+    (fcTokenList.SolidTokenType(2) = ttOpenBracket) and
+    (fcTokenList.SolidWordType(3) in IdentifierTypes) and
+    (fcTokenList.SolidTokenType(4) = ttColon) then
+  begin
+    RecogniseArrayConstant;
   end
   else if (ArrayConstantNext) then
   begin
@@ -2243,7 +2265,7 @@ begin
   CheckNilInstance(lcNextToken, fcRoot.LastLeaf);
 
   { delphi.net records can have public and private parts }
-  while lcNextToken.TokenType in ClassVisibility + [ttStrict, ttClass] do
+  while IsRecordVisibility or (lcNextToken.TokenType = ttClass) do
   begin
     PushNode(nClassVisibility);
     RecogniseClassVisibility;
@@ -2266,7 +2288,7 @@ begin
   lcNextToken := fcTokenList.FirstSolidToken;
   CheckNilInstance(lcNextToken, fcRoot.LastLeaf);
 
-  while not (lcNextToken.TokenType in [ttEnd, ttCase, ttCloseBracket, ttStrict] + ClassVisibility) do
+  while not ((lcNextToken.TokenType in [ttEnd, ttCase, ttCloseBracket]) or IsRecordVisibility) do
   begin
     case lcNextToken.TokenType of
       ttProcedure:
@@ -2277,6 +2299,20 @@ begin
         RecogniseConstructorHeading(True);
       ttDestructor:
         RecogniseDestructorHeading(True);
+      ttGeneric:
+        { mode objfpc generic methods in an advanced record; anything else
+          is a field named Generic }
+        if (fcTokenList.SolidTokenType(2) in [ttProcedure, ttFunction]) or
+          ((fcTokenList.SolidTokenType(2) = ttClass) and
+           (fcTokenList.SolidTokenType(3) in [ttProcedure, ttFunction])) then
+        begin
+          if ttFunction in [fcTokenList.SolidTokenType(2), fcTokenList.SolidTokenType(3)] then
+            RecogniseFunctionHeading(False, False)
+          else
+            RecogniseProcedureHeading(False, False);
+        end
+        else
+          RecogniseFieldDecl;
       ttClass:
       begin
         lcVarSection:=fcTokenList.SolidTokenType(2) in [ttVar,ttThreadVar];
@@ -2313,7 +2349,12 @@ begin
         continue;
       end
       else
+      begin
+        // a field named private, public, ... (see IsRecordVisibility)
+        if lcNextToken.TokenType in ClassVisibility + [ttStrict] then
+          ChangeFirstSolidTokenType(ttIdentifier);
         RecogniseFieldDecl;
+      end;
     end;
 
     lcNextToken := fcTokenList.FirstSolidToken;
@@ -2600,7 +2641,7 @@ procedure TBuildParseTree.RecogniseVarSection(const pbClassVars: boolean; aExter
 const
   END_VAR_SECTION: TTokenTypeSet =
     [ttVar, ttThreadVar, ttConst, ttLabel, ttResourceString, ttType,
-    ttBegin, ttEnd, ttImplementation, ttInitialization,
+    ttBegin, ttEnd, ttImplementation, ttInitialization, ttFinalization,
     ttProcedure, ttFunction, ttOperator, ttConstructor, ttDestructor, ttClass, ttAsm, ttGeneric, ttCase];
 var
   leEndVarSection: TTokenTypeSet;
@@ -2991,7 +3032,7 @@ begin
 
     if not (fcTokenList.FirstSolidTokenType in Operators + BlockExitWords + [ttSemicolon, ttCloseBracket, ttCloseSquareBracket, ttComma]) then
     begin
-      RecogniseDesignator;
+      RecogniseDesignator(true);
       if fcTokenList.FirstSolidTokenType = ttOpenBracket then
       begin
         RecogniseActualParams;
@@ -3071,7 +3112,7 @@ begin
     if lt = ttAmpersand then
       Recognise(ttAmpersand);
 
-    RecogniseDesignator;
+    RecogniseDesignator(true);
     if fcTokenList.FirstSolidTokenType = ttOpenBracket then
     begin
       RecogniseActualParams;
@@ -3097,7 +3138,7 @@ begin
   { can't use lc for FirstSolidToken any more, have moved on }
   if fcTokenList.FirstSolidTokenType in [ttHat, ttDot, ttOpenSquareBracket] then
   begin
-    RecogniseDesignatorTail;
+    RecogniseDesignatorTail(true);
   end
   else if fcTokenList.FirstSolidTokenType = ttOpenBracket then
   begin
@@ -3231,7 +3272,7 @@ begin
     RaiseParseError(lisMsgUnexpectedTokenInMulOp, fcTokenList.FirstSolidToken);
 end;
 
-procedure TBuildParseTree.RecogniseDesignator;
+procedure TBuildParseTree.RecogniseDesignator(pbInFactor:boolean);
 var
   lc: TSourceToken;
 begin
@@ -3251,7 +3292,7 @@ begin
     Recognise(ttAtSign);
   end;
 
-  RecogniseQualId;
+  RecogniseQualId(pbInFactor);
 
   lc := fcTokenList.FirstSolidToken;
   CheckNilInstance(lc, fcRoot.LastLeaf);
@@ -3260,7 +3301,7 @@ begin
     RecogniseGenericType;
   end;
 
-  RecogniseDesignatorTail;
+  RecogniseDesignatorTail(pbInFactor);
 
   PopNode;
 end;
@@ -3283,7 +3324,7 @@ begin
 
 end;
 
-procedure TBuildParseTree.RecogniseDesignatorTail;
+procedure TBuildParseTree.RecogniseDesignatorTail(pbInFactor:boolean);
 const
   DESIGNATOR_TAIL_TOKENS = [ttDot, ttOpenBracket, ttOpenSquareBracket, ttHat,
     ttPlus, ttMinus, ttAs];
@@ -3327,6 +3368,8 @@ begin
       end;
       ttPlus, ttMinus:
       begin
+        if pbInFactor then
+          break;
         Recognise([ttPlus, ttMinus]);
         RecogniseExpr(True);
       end;
@@ -3546,7 +3589,7 @@ begin
   if lt = ttOpenBracket then
   begin
     RecogniseBracketedStatement;
-    RecogniseDesignatorTail;
+    RecogniseDesignatorTail(false);
 
     if fcTokenList.FirstSolidTokenType in AssignmentDirectives then
     begin
@@ -3587,7 +3630,7 @@ begin
   begin
     RecogniseRaise;
   end
-  else if lt = ttInline then
+  else if (lt = ttInline) and (fcTokenList.SolidTokenType(2) = ttOpenBracket) then
   begin
     RecogniseInline;
   end
@@ -3624,15 +3667,15 @@ begin
    RecognisePossibleAssign;
 
   Recognise(ttCloseBracket);
-  RecogniseDesignatorTail;
+  RecogniseDesignatorTail(false);
 end;
 
 procedure TBuildParseTree.RecognisePossibleAssign;
 begin
   // should be fullblown expression?
-  RecogniseDesignator;
+  RecogniseDesignator(false);
 
-  RecogniseDesignatorTail;
+  RecogniseDesignatorTail(false);
 
   if TokenList.FirstSolidTokenType in AssignmentDirectives then
   begin
@@ -3968,7 +4011,7 @@ begin
     RecogniseVarDecl(vtInFor);
   end
   else
-    RecogniseQualId;
+    RecogniseQualId(false);
 
 
   //type cast    for TCollectionItem(item) in ItemList do 
@@ -3977,7 +4020,7 @@ begin
   while fcTokenList.FirstSolidTokenType=ttOpenBracket do
   begin
     Recognise(ttOpenBracket);
-    RecogniseQualId;
+    RecogniseQualId(false);
     Inc(lCountBrackets);
   end;
   while lCountBrackets>0 do
@@ -5307,6 +5350,27 @@ begin
           RaiseParseError(lisMsgUnexpectedToken, fcTokenList.FirstSolidToken);
         RecogniseDestructorHeading(True);
       end;
+      ttGeneric:
+      begin
+        { mode objfpc generic methods: "generic function F<T>" and
+          "generic class procedure P<T>"; anything else is a field named
+          Generic }
+        if fcTokenList.SolidTokenType(2) = ttClass then
+          lt := fcTokenList.SolidTokenType(3)
+        else
+          lt := fcTokenList.SolidTokenType(2);
+        case lt of
+          ttProcedure:
+            RecogniseProcedureHeading(False, True);
+          ttFunction:
+            RecogniseFunctionHeading(False, True);
+        else
+          if aExternalClass then
+            RecogniseVarDecl(vtInExternalClassBody)
+          else
+            RecogniseVarDecl(vtInClassBody);
+        end;
+      end;
       ttProperty:
         RecogniseProperty;
       ttType:
@@ -5700,7 +5764,7 @@ begin
   RecogniseExpr(True);
 end;
 
-procedure TBuildParseTree.RecogniseQualId;
+procedure TBuildParseTree.RecogniseQualId(pbInFactor:boolean);
 begin
   { typecast, e.g. "(x as Ty)"
      or just bracketed, as in (x).y();
@@ -5711,13 +5775,14 @@ begin
       -> (Designator)
       -> (Designator as type)
       -> ident
-      ->(pointervar + expr)
+      -> (pointervar + expr)  (p+1)^:=7;
+      -> (1 + pointervar)     pointer expression     (1+p)^:=8
   }
   if (fcTokenList.FirstSolidTokenType = ttOpenBracket) then
   begin
     PushNode(nBracketedQual);
     Recognise(ttOpenBracket);
-    RecogniseDesignator;
+    RecogniseDesignator(false);
 
     if (fcTokenList.FirstSolidTokenType = ttAs) then
       RecogniseAsCast;
@@ -5726,8 +5791,13 @@ begin
     PopNode;
   end
   else
+  begin
     // a simple ident - e.g. "x"
-    RecogniseIdentifier(True, idAny);
+    if IsIdentifierToken(fcTokenList.FirstSolidToken,idStrict) then
+      RecogniseIdentifier(True, idAny)
+    else
+      RecogniseExpr(false);
+  end;
 end;
 
 procedure TBuildParseTree.RecogniseIdentifier(const pbCanHaveUnitQualifier: boolean;

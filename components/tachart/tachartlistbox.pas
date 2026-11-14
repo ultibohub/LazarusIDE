@@ -396,7 +396,7 @@ begin
     FCheckboxSize := Size(bmp.Width, bmp.Height);
     {$ELSE}
     ted := ThemeServices.GetElementDetails(tb);
-    FCheckboxSize := ThemeServices.GetDetailSize(ted);
+    FCheckboxSize := ThemeServices.GetDetailSizeForPPI(ted, Font.PixelsPerInch);
     {$ENDIF}
   end;
 
@@ -406,7 +406,7 @@ begin
     {$IFDEF USE_BITMAPS}
     Canvas.Draw(rcb.Left, rcb.Top, bmp);
     {$ELSE}
-    ThemeServices.DrawElement(Canvas.Handle, ted, rcb);
+    ThemeServices.DrawElementForPPI(Canvas.Handle, ted, rcb, Font.PixelsPerInch);
     {$ENDIF}
     x := IfThen(isRTL, rcb.Left, rcb.Right);
   end
@@ -527,14 +527,20 @@ end;
 procedure TChartListbox.MeasureItem(AIndex: Integer; var AHeight: Integer);
 var
   hText: Integer;
+  hCheck: Integer;
 begin
   inherited MeasureItem(AIndex, AHeight);
   hText := CalculateStandardItemHeight;
   if Options * [cloShowIcons, cloShowCheckboxes] <> [] then
-    inc(hText, 4);
+    inc(hText, Scale96ToFont(4));
   AHeight := Max(AHeight, hText);
   if cloShowCheckboxes in Options then
-    AHeight := Max(AHeight, GetSystemMetrics(SM_CYMENUCHECK) + 2);
+  begin
+    hCheck := GetSystemMetrics(SM_CYMENUCHECK) + 2;
+    // MulDiv required to ensure correct per-monitor scaling.
+    hCheck := MulDiv(hCheck, Font.PixelsPerInch, ScreenInfo.PixelsPerInchx);
+    AHeight := Max(AHeight, hCheck);
+  end;
 end;
 
 { standard MouseDown handler: checks if the click occurred on the checkbox,
