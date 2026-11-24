@@ -84,7 +84,9 @@ msgid "Backup successful: %s"
 msgstr ""
 
 #: anchordockstr.adrsbottom
-msgid "bottom"
+#, fuzzy
+#| msgid "bottom"
+msgid "Bottom"
 msgstr "bas"
 
 #: anchordockstr.adrsclose
@@ -149,10 +151,21 @@ msgstr "Activer l'ancrage des fenêtres de l'EDI (nécessite le redémarrage de 
 msgid "This option allows to organize groups of windows (or all windows) into a single window. For a \"classic\" IDE with only floating windows turn the option off."
 msgstr "Cette option permet d'organiser des groupes de fenêtres (ou toutes les fenêtres) en une seule fenêtre. Pour un EDI \"classique\" avec uniquement des fenêtres flottantes, désactivez l'option."
 
-#: anchordockstr.adrsenlargeside
-#, object-pascal-format
-msgid "Enlarge %s side"
-msgstr "Agrandir le côté %s"
+#: anchordockstr.adrsenlargebottomside
+msgid "Enlarge bottom side"
+msgstr ""
+
+#: anchordockstr.adrsenlargeleftside
+msgid "Enlarge left side"
+msgstr ""
+
+#: anchordockstr.adrsenlargerightside
+msgid "Enlarge right side"
+msgstr ""
+
+#: anchordockstr.adrsenlargetopside
+msgid "Enlarge top side"
+msgstr ""
 
 #: anchordockstr.adrsfilledheaders
 msgid "Fill headers"
@@ -223,7 +236,9 @@ msgid "Layout restored successfully"
 msgstr ""
 
 #: anchordockstr.adrsleft
-msgid "left"
+#, fuzzy
+#| msgid "left"
+msgid "Left"
 msgstr "gauche"
 
 #: anchordockstr.adrslocked
@@ -246,6 +261,10 @@ msgstr "nom de contrôle manquant"
 msgid "modal forms can not be made dockable"
 msgstr "les fiches modales ne sont pas amarrables"
 
+#: anchordockstr.adrsmovebottom
+msgid "Move bottom"
+msgstr ""
+
 #: anchordockstr.adrsmoveheadertoleftwhenwidthheight100headeralignleft
 msgid "Move header to left when (Width/Height)*100>=HeaderAlignLeft"
 msgstr "Déplacer l'en-tête vers la gauche quand  \"(Width/Height)*100>=HeaderAlignLeft\""
@@ -253,6 +272,10 @@ msgstr "Déplacer l'en-tête vers la gauche quand  \"(Width/Height)*100>=HeaderA
 #: anchordockstr.adrsmoveheadertotopwhenwidthheight100headeraligntop
 msgid "Move header to top when (Width/Height)*100<=HeaderAlignTop"
 msgstr "Déplacer l'en-tête vers le haut quand \"(Width/Height)*100<=HeaderAlignTop\""
+
+#: anchordockstr.adrsmoveleft
+msgid "Move left"
+msgstr ""
 
 #: anchordockstr.adrsmovepageleft
 msgid "Move page left"
@@ -269,6 +292,14 @@ msgstr "Déplacer la page vers la droite"
 #: anchordockstr.adrsmovepagerightmost
 msgid "Move page rightmost"
 msgstr "Déplacer la page tout à droite"
+
+#: anchordockstr.adrsmoveright
+msgid "Move right"
+msgstr ""
+
+#: anchordockstr.adrsmovetop
+msgid "Move top"
+msgstr ""
 
 #: anchordockstr.adrsmultilinepages
 msgid "Multiline Tabs"
@@ -315,7 +346,9 @@ msgid "Restore selected layout"
 msgstr ""
 
 #: anchordockstr.adrsright
-msgid "right"
+#, fuzzy
+#| msgid "right"
+msgid "Right"
 msgstr "droite"
 
 #: anchordockstr.adrsscaleonresize
@@ -360,7 +393,9 @@ msgid "There is another dock master installed. Only one docking package can be i
 msgstr "Il y a un autre gestionnaire d'amarrage installé. Seul un paquet d'amarrage peut être installé à un moment donné. Veuillez désinstaller le gestionnaire d'amarrage %s et relancer l'EDI"
 
 #: anchordockstr.adrstop
-msgid "top"
+#, fuzzy
+#| msgid "top"
+msgid "Top"
 msgstr "sommet"
 
 #: anchordockstr.adrstouseanchordockingyoumustfirstuninstall

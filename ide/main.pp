@@ -4219,20 +4219,26 @@ begin
       cont := False;
       if xy.X > 1 then begin
         dec(xy.x); // look at the very end of the token
-        ASrcEdit.EditorComponent.GetHighlighterAttriAtRowColEx(xy,
-          TokenTxt, TokenType, Start, Attri);
-        inc(xy.x);
-        if Start + Length(TokenTxt) = xy.X then begin
+        if ASrcEdit.EditorComponent.GetHighlighterAttriAtRowColEx(xy,
+           TokenTxt, TokenType, Start, Attri)
+        then begin
+          inc(xy.x);
+          if Start + Length(TokenTxt) = xy.X then begin
+            IdentFound := (TokenType >= 0) and (TtkTokenKind(TokenType) in [tkAsm, tkComment, tkIdentifier, tkString]);
+            StringFound := TtkTokenKind(TokenType) = tkString;
+          end;
+          cont := True;
+        end
+        else
+          inc(xy.x);
+      end;
+      if not (IdentFound or StringFound) then begin
+        if ASrcEdit.EditorComponent.GetHighlighterAttriAtRowColEx(xy,
+           TokenTxt, TokenType, Start, Attri, cont)
+        then begin
           IdentFound := (TokenType >= 0) and (TtkTokenKind(TokenType) in [tkAsm, tkComment, tkIdentifier, tkString]);
           StringFound := TtkTokenKind(TokenType) = tkString;
         end;
-        cont := True;
-      end;
-      if not (IdentFound or StringFound) then begin
-        ASrcEdit.EditorComponent.GetHighlighterAttriAtRowColEx(xy,
-          TokenTxt, TokenType, Start, Attri, cont);
-        IdentFound := (TokenType >= 0) and (TtkTokenKind(TokenType) in [tkAsm, tkComment, tkIdentifier, tkString]);
-        StringFound := TtkTokenKind(TokenType) = tkString;
       end;
     end;
 
@@ -7777,7 +7783,7 @@ begin
   // pevent HELP pushbutton from closing the dialog, others should close
   if AModalResult = 500 then begin
      ACanClose := False;
-     ShowHelpOrError('https://wiki.lazarus.freepascal.org/DWARF',
+     ShowHelpOrError('https://wiki.freepascal.org/DWARF',
         'Help for debug info selection','text/html');
   end;
 end;
