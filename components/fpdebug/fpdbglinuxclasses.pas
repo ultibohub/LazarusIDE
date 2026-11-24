@@ -99,6 +99,7 @@ type
     FProcProcess: TProcessWithRedirect;
     FIsTerminating: boolean;
     FMasterPtyFd: cint;
+    FSlavePTyFd: cint;
     FCurrentThreadId: THandle;
     FSingleSteppingThreadID: THandle;
     // This breakpoint is triggered after dynamic libraries have been (un)loaded
@@ -179,7 +180,6 @@ implementation
 var
   DBG_VERBOSE, DBG_WARNINGS, FPDBG_LINUX: PLazLoggerLogGroup;
   GConsoleTty: string;
-  GSlavePTyFd: cint;
 
 type
   Tprocess_vm_readv = function(pid: pid_t; const local_iov: piovec;
@@ -277,10 +277,14 @@ begin
     writeln('Failed to start trace of process. Errcode: '+inttostr(fpgeterrno));
 
   ConsoleTtyFd := -1;
-  if GConsoleTty<>'' then
-    ConsoleTtyFd:=FpOpen(GConsoleTty,O_RDWR+O_NOCTTY)
-  else if GSlavePTyFd>-1 then
-    ConsoleTtyFd:=GSlavePTyFd;
+  if GConsoleTty<>'' then begin
+    ConsoleTtyFd:=FpOpen(GConsoleTty,O_RDWR+O_NOCTTY);
+    if FSlavePTyFd>-1 then
+      FpClose(FSlavePTyFd);
+  end
+  else
+  if FSlavePTyFd>-1 then
+    ConsoleTtyFd:=FSlavePTyFd;
 
   if ConsoleTtyFd>-1 then begin
     if FpSetsid <> -1 then
@@ -303,7 +307,6 @@ begin
   end
   else
     writeln('Failed to open tty '+GConsoleTty+'. Errno: '+inttostr(fpgeterrno));
-
 end;
 
 function TDbgLinuxThread.GetName: String;
@@ -640,6 +643,8 @@ var
   AProcess: TProcessWithRedirect;
   AMasterPtyFd: cint;
   AnExecutabeFilename: string;
+const
+  FD_CLOEXEC = 1;
 begin
   Result := false;
   if FMasterPtyFd>-1 then
@@ -660,17 +665,23 @@ begin
   end;
 
   AMasterPtyFd:=-1;
+  FSlavePTyFd :=-1;
   if siRediretOutput in AFlags then
     begin
     if AConsoleTty<>'' then
       DebugLn(DBG_VERBOSE, 'It is of no use to provide a console-tty when the console output is being redirected.');
     GConsoleTty:='';
-    if openpty(@AMasterPtyFd, @GSlavePTyFd, nil, nil, nil) <> 0 then
+    if openpty(@AMasterPtyFd, @FSlavePTyFd, nil, nil, nil) <> 0 then
+      begin
+      AMasterPtyFd:=-1;
+      FSlavePTyFd :=-1;
       DebugLn(DBG_WARNINGS, 'Failed to open pseudo-tty. Errcode: '+inttostr(fpgeterrno));
+      end
+      else
+        FpFcntl(AMasterPtyFd, F_SETFD, FD_CLOEXEC);
     end
   else
     begin
-    GSlavePTyFd:=-1;
     GConsoleTty:=AConsoleTty;
     end;
 
@@ -685,13 +696,13 @@ begin
       AProcess.SetRedirection(dtStdIn,  Config.StdInRedirFile,  Config.FileOverwriteStdIn);
       if (Config.StdOutRedirFile = Config.StdErrRedirFile) then begin
         if Config.StdOutRedirFile <> '' then begin
-          FProcProcess.SetRedirection(dtStdOut, Config.StdOutRedirFile, Config.FileOverwriteStdOut or Config.FileOverwriteStdErr);
-          FProcProcess.Options := FProcProcess.Options + [poStdErrToOutPut];
+          AProcess.SetRedirection(dtStdOut, Config.StdOutRedirFile, Config.FileOverwriteStdOut or Config.FileOverwriteStdErr);
+          AProcess.Options := AProcess.Options + [poStdErrToOutPut];
         end;
       end
       else begin
-        FProcProcess.SetRedirection(dtStdOut, Config.StdOutRedirFile, Config.FileOverwriteStdOut);
-        FProcProcess.SetRedirection(dtStdErr, Config.StdErrRedirFile, Config.FileOverwriteStdErr);
+        AProcess.SetRedirection(dtStdOut, Config.StdOutRedirFile, Config.FileOverwriteStdOut);
+        AProcess.SetRedirection(dtStdErr, Config.StdErrRedirFile, Config.FileOverwriteStdErr);
       end;
     end;
 
@@ -707,13 +718,14 @@ begin
       DebugLn(DBG_WARNINGS, Format('Failed to start process "%s". Errormessage: "%s".',[Name, E.Message]));
       AProcess.Free;
 
-    if GSlavePTyFd>-1 then
-      FpClose(GSlavePTyFd);
     if AMasterPtyFd>-1 then
       FpClose(AMasterPtyFd);
     FMasterPtyFd:=-1;
     end;
   end;
+  if FSlavePTyFd>-1 then
+    FpClose(FSlavePTyFd);
+  FSlavePTyFd := -1;
 end;
 
 function TDbgLinuxProcess.AttachToInstance(APid: Integer; out AnError: TFpError
@@ -936,6 +948,8 @@ Var
   f: TfdSet;
   sleepytime: ttimeval;
 begin
+  if FMasterPtyFd = -1 then
+    exit(0);
   sleepytime.tv_sec := ATimeOutMs div 1000;
   sleepytime.tv_usec := (ATimeOutMs mod 1000)*1000;
   FpFD_ZERO(f);
@@ -949,6 +963,8 @@ var
   ABytesRead: cint;
   s: string;
 begin
+  if FMasterPtyFd = -1 then
+    exit('');
   if fpioctl(FMasterPtyFd, FIONREAD, @ABytesAvailable)<0 then
     ABytesAvailable := 0;
 
@@ -957,6 +973,8 @@ begin
   begin
     setlength(s, ABytesAvailable);
     ABytesRead := fpRead(FMasterPtyFd, s[1], ABytesAvailable);
+    if ABytesRead < 0 then
+      exit;
     SetLength(s, ABytesRead);
     Result := Result + s;
 
@@ -967,6 +985,8 @@ end;
 
 procedure TDbgLinuxProcess.SendConsoleInput(AString: string);
 begin
+  if (FMasterPtyFd = -1) or (AString='') then
+    exit;
   if FpWrite(FMasterPtyFd, AString[1], length(AString)) <> Length(AString) then
     DebugLn(DBG_WARNINGS, 'Failed to send input to console.');
 end;

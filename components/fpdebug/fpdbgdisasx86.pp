@@ -167,7 +167,7 @@ type
     OPfsubr, OPftst, OPfucom, OPfwait, OPfxam, OPfxch, OPfxrstor, OPfxsave, OPfxtract,
     OPfyl2x, OPfyl2xp1, OPgf2p8affineinvqb, OPgf2p8affineqb, OPgf2p8mulb,
 
-    OPgetbv, OPgetsec,
+    OPgetsec,
 
     OPhadd, OPhlt, OPhreset, OPhsub,
 
@@ -214,7 +214,7 @@ type
     OPrmpadjust, OPrmpupdate,OProl, OPror, OProrx, OPround, OPrsm, OPrsqrt, OPrstorssp,
 
     OPsahf, OPsal, OPsalc, OPsar, OPsaveprevssp, OPsbb, OPscas, OPserialize, OPset__,
-    OPsetbv, OPsetssbsy, OPsfence, OPsgdt, OPsha1msg1, OPsha1msg2, OPsha1nexte,
+    OPsetssbsy, OPsfence, OPsgdt, OPsha1msg1, OPsha1msg2, OPsha1nexte,
     OPsha1rnds4, OPsha256msg1, OPsha256msg2, OPsha256rnds2, OPshl, OPshr, OPshuf,
     OPsidt, OPskinit, OPsldt, OPsmsw, OPsqrt, OPstac, OPstc, OPstd, OPstgi, OPsti,
     OPstmxcsr, OPstos, OPstr, OPsub, OPswapgs, OPsyscall, OPsysenter, OPsysexit,
@@ -431,6 +431,7 @@ type
     procedure AddVy;
     procedure AddWd;
     procedure AddWdq;
+    procedure AddW128;
     procedure AddWpd;
     procedure AddWps;
     procedure AddWq;
@@ -500,6 +501,7 @@ type
     procedure SetOpcode(AOpcode: TOpcode; ASuffix: TOpCodeSuffix = OPSnone; APrefixV: Boolean = False);
     procedure Default64;
     procedure Force64;
+    procedure IVexW;
     function Ignore64(s: String): String;
     function OperandSize: TOperandSize;
     function StdCond(AIndex: Byte): TOpCodeSuffix;
@@ -676,7 +678,7 @@ const
       'fsubr', 'ftst', 'fucom', 'fwait', 'fxam', 'fxch', 'fxrstor', 'fxsave', 'fxtract',
       'fyl2x', 'fyl2xp1', 'gf2p8affineinvqb', 'gf2p8affineqb', 'gf2p8mulb',
 
-      'getbv', 'getsec',
+      'getsec',
 
       'hadd', 'hlt', 'hreset', 'hsub',
 
@@ -723,7 +725,7 @@ const
       'rmpadjust', 'rmpupdate','rol', 'ror', 'rorx', 'round', 'rsm', 'rsqrt', 'rstorssp',
 
       'sahf', 'sal', 'salc', 'sar', 'saveprevssp', 'sbb', 'scas', 'serialize', 'set',
-      'setbv', 'setssbsy', 'sfence', 'sgdt', 'sha1msg1', 'sha1msg2', 'sha1nexte',
+      'setssbsy', 'sfence', 'sgdt', 'sha1msg1', 'sha1msg2', 'sha1nexte',
       'sha1rnds4', 'sha256msg1', 'sha256msg2', 'sha256rnds2', 'shl', 'shr', 'shuf',
       'sidt', 'skinit', 'sldt', 'smsw', 'sqrt', 'stac', 'stc', 'std', 'stgi', 'sti',
       'stmxcsr', 'stos', 'str', 'sub', 'swapgs', 'syscall', 'sysenter', 'sysexit',
@@ -826,6 +828,11 @@ procedure TX86Disassembler.Force64;
 begin
   if ProcessMode = dm64 then
     Include(Flags, oprForce64);
+end;
+
+procedure TX86Disassembler.IVexW;
+begin
+  if ProcessMode = dm32 then Exclude(Flags, rexW);
 end;
 
 
@@ -1891,6 +1898,11 @@ begin
   AddModRM([modReg, modMem], VectorSize, regXmm);
 end;
 
+procedure TX86Disassembler.AddW128;
+begin
+  AddModRM([modReg, modMem], os128, regXmm);
+end;
+
 procedure TX86Disassembler.AddWpd;
 begin
   AddModRM([modReg, modMem], VectorSize, regXmm);
@@ -2091,7 +2103,7 @@ procedure TX86Disassembler.DoX87;
         AddReg0; AddRegN;
       end;
       $E9: begin
-        SetOpcode(OPfucom, OPSx_p);
+        SetOpcode(OPfucom, OPSx_pp);
       end;
     else
       SetOpcode(OPX_InvalidX87);
@@ -2159,7 +2171,7 @@ procedure TX86Disassembler.DoX87;
   const
     OPC: array[0..7] of TOpCode =       (OPfld,   OPfisttp, OPfst,   OPfst,  OPfrstor, OPX_InvalidX87, OPfnsave, OPfnstsw);
     OPS: array[0..7] of TOpCodeSuffix = (OPSnone, OPSnone,  OPSnone, OPSx_p, OPSnone,  OPSnone,        OPSnone,  OPSnone);
-    OPCx: array[0..7] of TOpCode =       (OPffree, OPX_InvalidX87, OPfst,   OPfst,  OPX_InvalidX87, OPfucom, OPX_InvalidX87, OPX_InvalidX87);
+    OPCx: array[0..7] of TOpCode =       (OPffree, OPX_InvalidX87, OPfst,   OPfst,  OPfucom,        OPfucom, OPX_InvalidX87, OPX_InvalidX87);
     OPSx: array[0..7] of TOpCodeSuffix = (OPSnone, OPSnone,        OPSnone, OPSx_p, OPSnone,        OPSx_p,  OPSnone,        OPSnone);
   begin
     case Code[ModRMIdx] of
@@ -2476,7 +2488,7 @@ procedure TX86Disassembler.DoGroup7;
 const
   RM0: array [0..7] of TOpCode = (OPX_Group7, OPvmcall, OPvmlaunch, OPvmresume, OPvmxoff, OPX_Group7, OPX_Group7, OPX_Group7);
   RM1: array [0..7] of TOpCode = (OPmonitor, OPmwait, OPclac, OPstac, OPX_Group7, OPX_Group7, OPX_Group7, OPencls);
-  RM2: array [0..7] of TOpCode = (OPgetbv, OPsetbv, OPX_Group7, OPX_Group7, OPvmfunc, OPxend, OPxtest, OPenclu);
+  RM2: array [0..7] of TOpCode = (OPxgetbv, OPxsetbv, OPX_Group7, OPX_Group7, OPvmfunc, OPxend, OPxtest, OPenclu);
   RM3: array [0..7] of TOpCode = (OPvmrun, OPvmmcall, OPvmload, OPvmsave, OPstgi, OPclgi, OPskinit, OPinvlpga);
 begin
   Assert(Code[CodeIdx] = $01, 'Not group 7');
@@ -2734,7 +2746,7 @@ begin
     end;
   end
   else begin
-    SetOpcode(OPX_Group12);
+    SetOpcode(OPX_Group13);
   end;
 end;
 
@@ -2752,8 +2764,6 @@ begin
   then begin
     DecodeSIMD([soNone, so66]);
 
-    SetOpcode(OPC[ModRM.Index], OPS[ModRM.Index]);
-
     case SimdOpcode of
       soNone: begin
         if ModRM.Index in [2,6]
@@ -2769,7 +2779,7 @@ begin
   Assert(Code[CodeIdx] = $AE, 'Not group 15');
 
   DecodeModRM;
-  DecodeSIMD([soNone, soF3]);
+  DecodeSIMD([soNone, so66, soF3]);
 
   SetOpcode(OPX_Group15);
 
@@ -2796,6 +2806,10 @@ begin
           7: begin SetOpcode(OPclflush               ); AddMb; end
         end;
       end;
+    end;
+    so66: begin
+      if (ModRM.Mode <> 3) and (ModRM.Index = 7)
+      then begin SetOpcode(OPclflushopt); AddMb; end;
     end;
     soF3: begin
       if ModRM.Mode = 3
@@ -2840,6 +2854,7 @@ begin
   else
     Exit;
   end;
+  IVexW;
   CheckVex;
   AddBy; AddEy;
 end;
@@ -3488,7 +3503,7 @@ begin
       AddEv; AddGv; AddIb;
     end;
     $AD: begin
-      SetOpcode(OPshl, OPSx_d);
+      SetOpcode(OPshr, OPSx_d);
       AddEv; AddGv;
       AddReg(regGeneral, os8, REG_C);
     end;
@@ -3711,7 +3726,10 @@ begin
       end;
     end;
     // $F8..$FE: see $F1
-    $FF: SetOpcode(OPud1);
+    $FF: begin
+      SetOpcode(OPud0);
+      AddGv; AddEv;
+    end;
   end;
 
   if not HasOpcode
@@ -3753,9 +3771,9 @@ begin
         $CD: begin SetOpcode(OPsha256msg2                 ); AddVdq; AddWdq;                   end;
         $F0: begin SetOpcode(OPmov,         OPSc_be       ); AddGy;  AddMy;                    end;
         $F1: begin SetOpcode(OPmov,         OPSc_be       ); AddMy;  AddGy;                    end;
-        $F2: begin SetOpcode(OPandn                       ); AddGy;  AddBy;  AddEy;  CheckVex; end;
-        $F5: begin SetOpcode(OPbzhi                       ); AddGy;  AddEy;  AddBy;  CheckVex; end;
-        $F7: begin SetOpcode(OPbextr                      ); AddGy;  AddEy;  AddBy;  CheckVex; end;
+        $F2: begin SetOpcode(OPandn                ); IVexW; AddGy;  AddBy;  AddEy;  CheckVex; end;
+        $F5: begin SetOpcode(OPbzhi                ); IVexW; AddGy;  AddEy;  AddBy;  CheckVex; end;
+        $F7: begin SetOpcode(OPbextr               ); IVexW; AddGy;  AddEy;  AddBy;  CheckVex; end;
       end;
     end;
     so66: begin
@@ -3825,7 +3843,7 @@ begin
         $47: begin SetOpcode(OPvpsllv,      OPS_d_q       ); AddVx;  AddHx;  AddWx;  CheckVex; end;
         $58: begin SetOpcode(OPvpbroadcast, OPSx_d        ); AddVx;  AddWx;          CheckVex; end;
         $59: begin SetOpcode(OPvpbroadcast, OPSx_q        ); AddVx;  AddWx;          CheckVex; end;
-        $5A: begin SetOpcode(OPvpbroadcast, OPSx_i128     ); AddVqq; AddMdq;         CheckVex; end;
+        $5A: begin SetOpcode(OPvbroadcast,  OPSx_i128     ); AddVqq; AddMdq;         CheckVex; end;
         $78: begin SetOpcode(OPvpbroadcast, OPSx_b        ); AddVx;  AddWx;          CheckVex; end;
         $79: begin SetOpcode(OPvpbroadcast, OPSx_w        ); AddVx;  AddWx;          CheckVex; end;
         $80: begin SetOpcode(OPinvept                     ); AddGy;  AddMdq;                   end;
@@ -3875,28 +3893,28 @@ begin
         $F0: begin SetOpcode(OPmov,         OPSc_be       ); AddGw;  AddMw;                    end;
         $F1: begin SetOpcode(OPmov,         OPSc_be       ); AddMw;  AddGw;                    end;
         $F6: begin SetOpcode(OPadcx                       ); AddGy;  AddEy;                    end;
-        $F7: begin SetOpcode(OPshl,         OPSx_x        ); AddGy;  AddEy;  AddBy;  CheckVex; end;
+        $F7: begin SetOpcode(OPshl,         OPSx_x ); IVexW; AddGy;  AddEy;  AddBy;  CheckVex; end;
       end;
     end;
     soF2: begin
       case Code[CodeIdx] of
-        $F0: begin SetOpcode(OPcrc32                      ); AddGd;  AddEb;                    end;
+        $F0: begin SetOpcode(OPcrc32                      ); AddGy;  AddEb;                    end;
         $F1: begin
           SetOpcode(OPcrc32);
-          AddGd;
-          if pre66 in Flags then AddEw else AddEy;
+          AddGy;
+          if OperandSize = os16 then AddEw else AddEy;
           Flags := Flags - [pre66];
         end;
-        $F5: begin SetOpcode(OPpdep                       ); AddGy;  AddBy;  AddEy;  CheckVex; end;
-        $F6: begin SetOpcode(OPmul,         OPSx_x        ); AddBy;  AddGy;  AddReg(regGeneral, MODE_SIZE[ProcessMode], REG_D); AddEy; CheckVex; end;
-        $F7: begin SetOpcode(OPshr,         OPSx_x        ); AddGy;  AddEy;  AddBy;  CheckVex; end;
+        $F5: begin SetOpcode(OPpdep                ); IVexW; AddGy;  AddBy;  AddEy;  CheckVex; end;
+        $F6: begin SetOpcode(OPmul,         OPSx_x ); IVexW; AddGy;  AddBy;  AddEy;  CheckVex; end;
+        $F7: begin SetOpcode(OPshr,         OPSx_x ); IVexW; AddGy;  AddEy;  AddBy;  CheckVex; end;
       end;
     end;
     soF3: begin
       case Code[CodeIdx] of
-        $F5: begin SetOpcode(OPpext                       ); AddGy;  AddBy;  AddEy;  CheckVex; end;
+        $F5: begin SetOpcode(OPpext                ); IVexW; AddGy;  AddBy;  AddEy;  CheckVex; end;
         $F6: begin SetOpcode(OPadox                       ); AddGy;  AddEy;                    end;
-        $F7: begin SetOpcode(OPsar,         OPSx_x        ); AddGy;  AddEy;  AddBy;  CheckVex; end;
+        $F7: begin SetOpcode(OPsar,         OPSx_x ); IVexW; AddGy;  AddEy;  AddBy;  CheckVex; end;
       end;
     end;
   end;
@@ -3936,13 +3954,13 @@ begin
         $16: begin SetOpcode(OPpextr,       OPS_d_q,  True); AddEy;    AddVq;  AddIb;                      end;
         $17: begin SetOpcode(OPextract,     OPSx_ps,  True); AddEd;    AddVdq; AddIb;                      end;
         $18: begin SetOpcode(OPinsert,      OPSx_f128,True); AddVqq;   AddHqq; AddWqq;    AddIb; CheckVex; end;
-        $19: begin SetOpcode(OPextract,     OPSx_f128,True); AddWdq;   AddVqq; AddIb;            CheckVex; end;
+        $19: begin SetOpcode(OPextract,     OPSx_f128,True); AddW128;  AddVqq; AddIb;            CheckVex; end;
         $1D: begin SetOpcode(OPcvtps2,      OPSx_ph,  True); AddWx_Mq; AddVx;  AddIb;            CheckVex; end;
         $20: begin SetOpcode(OPpinsr,       OPSx_b,   True); AddVdq;   AddHx;  AddRd_Mb;  AddIb;           end;
         $21: begin SetOpcode(OPinsert,      OPSx_ps,  True); AddVdq;   AddHx;  AddUdq_Md; AddIb;           end;
         $22: begin SetOpcode(OPpinsr,       OPS_d_q,  True); AddVdq;   AddHx;  AddEy;     AddIb;           end;
         $38: begin SetOpcode(OPinsert,      OPSx_i128,True); AddVqq;   AddHqq; AddWqq;    AddIb; CheckVex; end;
-        $39: begin SetOpcode(OPextract,     OPSx_i128,True); AddWdq;   AddVqq; AddIb;            CheckVex; end;
+        $39: begin SetOpcode(OPextract,     OPSx_i128,True); AddW128;  AddVqq; AddIb;            CheckVex; end;
         $40: begin SetOpcode(OPdp,          OPSx_ps,  True); AddVx;    AddHx;  AddWx;     AddIb;           end;
         $41: begin SetOpcode(OPdp,          OPSx_pd,  True); AddVdq;   AddHx;  AddWdq;    AddIb;           end;
         $42: begin SetOpcode(OPmpsadbw,     OPSnone,  True); AddVx;    AddHx;  AddWx;     AddIb;           end;
@@ -3960,7 +3978,7 @@ begin
     end;
     soF2: begin
       case Code[CodeIdx] of
-        $F0: begin SetOpcode(OProrx                       ); AddGy;    AddEy;  AddIb;          CheckVex; end;
+        $F0: begin SetOpcode(OProrx                ); IVexW; AddGy;    AddEy;  AddIb;          CheckVex; end;
       end;
     end;
   end;
@@ -4615,9 +4633,11 @@ begin
       end;
       $D4: begin
         SetOpcode(OPaam); Check32;
+        AddIb;
       end;
       $D5: begin
         SetOpcode(OPaad); Check32;
+        AddIb;
       end;
       $D6: begin
         // AMD (old)
@@ -6060,6 +6080,7 @@ begin
   NewStack   := AStackPtr;
   NewFrame   := AFramePtr;
   StartStack := AStackPtr;
+  PushedNewFrameAddr := 0;
   CurConditionalForwardAddr := -1;
   BackwardJumpAddress.Address := 0;
   ForwardJumpAddress.Address := 0;

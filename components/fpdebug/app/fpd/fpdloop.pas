@@ -66,6 +66,8 @@ type
     destructor Destroy; override;
   end;
 
+  procedure DoBeforeExit;
+
 implementation
 
 uses
@@ -88,6 +90,11 @@ resourcestring
   sBreakpointReached = 'Breakpoint reached at %s.';
   sProcessPaused = 'Process paused.';
   sProcessExited = 'Process ended with exit-code %d.';
+
+procedure DoBeforeExit;
+begin
+  FpDbgGlobalWorkerQueue.TerminateAllThreads(True);
+end;
 
 { TPDDbgMemReader }
 
@@ -204,6 +211,7 @@ begin
   if AName = ''
   then begin
     WriteLn(' File not found');
+    sym.ReleaseReference;
     Exit;
   end;
 
@@ -286,11 +294,11 @@ end;
 
 destructor TFPDLoop.Destroy;
 begin
-  FMemManager.Free;
-  FMemReader.Free;
-  FMemConvertor.Free;
-  FMemManager.Free;
-  GController.Free;
+  FreeAndNil(FMemManager);
+  FreeAndNil(FMemReader);
+  FreeAndNil(FMemConvertor);
+  FreeAndNil(FMemModel);
+  FreeAndNil(GController);
   inherited Destroy;
 end;
 

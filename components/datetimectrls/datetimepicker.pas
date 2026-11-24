@@ -38,12 +38,18 @@ BEST REGARDS TO LAZARUS COMMUNITY!
 unit DateTimePicker;
 
 {$mode objfpc}{$H+}
+{$ifdef DARWIN}
+{$ModeSwitch objectivec2}
+{$endif}
 
 interface
 
 uses
   {$if defined(UNIX) and not defined(OPENBSD)}
   clocale, // needed to initialize default locale settings on Linux.
+  {$endif}
+  {$ifdef DARWIN}
+  CocoaAll,
   {$endif}
   Types, Classes, SysUtils, Math, DateUtils,
   // LCL
@@ -4251,17 +4257,120 @@ begin
   Result := FormatDateTime(formats[FKind], DateTime);
 end;
 
+{$ifdef DARWIN}
+function NSDateToDateTime(const aDateTime: NSDate): TDateTime;
+const
+  flags = NSCalendarUnitYear
+       or NSCalendarUnitMonth
+       or NSCalendarUnitDay
+       or NSCalendarUnitHour
+       or NSCalendarUnitMinute
+       or NSCalendarUnitSecond
+       or NSCalendarUnitNanosecond;
+var
+  components: NSDateComponents;
+  dateValue: TDateTime;
+  timeValue: TDateTime;
+  msValue: TDateTime;
+begin
+  if aDateTime = nil then
+  begin
+    Result:= 0.0;
+    Exit;
+  end;
+  components := NSCalendar.currentCalendar.components_fromDate(flags, aDateTime);
+  TryEncodeDate(components.year, components.month, components.day, dateValue);
+  TryEncodeTime(components.hour, components.minute, components.second, 0, timeValue);
+  msValue:= components.nanosecond / (MSecsPerDay*1000*1000);
+  Result:= dateValue + timeValue + msValue;
+end;
+
+function CocoaTryStrToDateTime(const AString: String; out ADateTime: TDateTime): Boolean;
+var
+  formatter: NSDateFormatter;
+  cocoaDatetime: NSDate;
+
+  procedure tryVariousStyle;
+  var
+    cocoaString: NSString;
+    dateStyle: NSDateFormatterStyle;
+    timeStyle: NSDateFormatterStyle;
+  begin
+    cocoaString := NSString.stringWithUTF8String(pchar(AString));
+    for dateStyle := NSDateFormatterMediumStyle to NSDateFormatterFullStyle do begin
+      for timeStyle := NSDateFormatterMediumStyle to NSDateFormatterFullStyle do begin
+        formatter.setDateStyle(dateStyle);
+        formatter.setTimeStyle(timeStyle);
+        cocoaDatetime := formatter.dateFromString(cocoaString);
+        if Assigned(cocoaDatetime) then
+          Exit;
+      end;
+    end;
+  end;
+
+begin
+  Result := False;
+  formatter := NSDateFormatter.new;
+  tryVariousStyle;
+  formatter.release;
+
+  if NOT Assigned(cocoaDatetime) then
+    Exit;
+
+  ADateTime := NSDateToDateTime(cocoaDatetime);
+  Result := True;
+end;
+{$endif}
+
+function TryAllToDateTime(const AString: String; out ADateTime: TDateTime): Boolean;
+  function tryInternal: Boolean;
+  var
+    formatSettings: TFormatSettings;
+  begin
+    formatSettings := DefaultFormatSettings;
+    Result := TryStrToDateTime(AString, ADateTime, formatSettings);
+    if Result then
+      Exit;
+
+    formatSettings.DateSeparator := '-';
+    formatSettings.TimeSeparator := ':';
+    formatSettings.DecimalSeparator := '.';
+    formatSettings.ShortDateFormat := 'yyyy-mm-dd';
+    formatSettings.ShortTimeFormat := 'hh:nn:ss.zzz';
+    Result := TryStrToDateTime(AString, ADateTime, formatSettings);
+  end;
+
+  function tryISO8601: Boolean;
+  begin
+    Result:= TryISOStrToDateTime(AString, ADateTime);
+  end;
+
+  function tryPlatform: Boolean;
+  begin
+    {$ifdef DARWIN}
+    Result := CocoaTryStrToDateTime(AString, ADateTime);
+    {$else}
+    Result := False;
+    {$ENDIF}
+  end;
+
+begin
+  Result := tryInternal;
+  if Result then
+    Exit;
+
+  Result := tryISO8601;
+  if Result then
+    Exit;
+
+  Result:= tryPlatform;
+end;
+
 function TCustomDateTimePicker.SetStringValue(const datetimeStr: String): Boolean;
 var
-  formatSettings: TFormatSettings;
   newDatetime: TDateTime;
 begin
-  formatSettings := DefaultFormatSettings;
-  formatSettings.DateSeparator:= '-';
-  formatSettings.LongDateFormat := 'yyyy-mm-dd';
-  formatSettings.TimeSeparator := ':';
-  formatSettings.LongTimeFormat := 'hh:nn:ss.zzz';
-  Result := TryStrToDateTime(datetimeStr, newDatetime, formatSettings);
+  Result := TryAllToDateTime(datetimeStr, newDatetime);
   if Result then
     SetDateTime(newDatetime);
 end;

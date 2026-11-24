@@ -135,7 +135,7 @@ uses
   Backup_Options, naming_options, fpdoc_options, idecoolbar_options, editortoolbar_options,
   editor_display_options, editor_keymapping_options, editor_mouseaction_options,
   editor_mouseaction_options_advanced, editor_color_options, editor_color_tml_options,
-  editor_markup_options, editor_wordwrap_options,
+  editor_markup_options, editor_wordwrap_options, editor_links_options,
   editor_markup_userdefined, editor_codetools_options, editor_codefolding_options,
   editor_general_misc_options, editor_dividerdraw_options,
   editor_multiwindow_options, editor_indent_options,
@@ -4219,20 +4219,26 @@ begin
       cont := False;
       if xy.X > 1 then begin
         dec(xy.x); // look at the very end of the token
-        ASrcEdit.EditorComponent.GetHighlighterAttriAtRowColEx(xy,
-          TokenTxt, TokenType, Start, Attri);
-        inc(xy.x);
-        if Start + Length(TokenTxt) = xy.X then begin
+        if ASrcEdit.EditorComponent.GetHighlighterAttriAtRowColEx(xy,
+           TokenTxt, TokenType, Start, Attri)
+        then begin
+          inc(xy.x);
+          if Start + Length(TokenTxt) = xy.X then begin
+            IdentFound := (TokenType >= 0) and (TtkTokenKind(TokenType) in [tkAsm, tkComment, tkIdentifier, tkString]);
+            StringFound := TtkTokenKind(TokenType) = tkString;
+          end;
+          cont := True;
+        end
+        else
+          inc(xy.x);
+      end;
+      if not (IdentFound or StringFound) then begin
+        if ASrcEdit.EditorComponent.GetHighlighterAttriAtRowColEx(xy,
+           TokenTxt, TokenType, Start, Attri, cont)
+        then begin
           IdentFound := (TokenType >= 0) and (TtkTokenKind(TokenType) in [tkAsm, tkComment, tkIdentifier, tkString]);
           StringFound := TtkTokenKind(TokenType) = tkString;
         end;
-        cont := True;
-      end;
-      if not (IdentFound or StringFound) then begin
-        ASrcEdit.EditorComponent.GetHighlighterAttriAtRowColEx(xy,
-          TokenTxt, TokenType, Start, Attri, cont);
-        IdentFound := (TokenType >= 0) and (TtkTokenKind(TokenType) in [tkAsm, tkComment, tkIdentifier, tkString]);
-        StringFound := TtkTokenKind(TokenType) = tkString;
       end;
     end;
 
@@ -7777,7 +7783,7 @@ begin
   // pevent HELP pushbutton from closing the dialog, others should close
   if AModalResult = 500 then begin
      ACanClose := False;
-     ShowHelpOrError('https://wiki.lazarus.freepascal.org/DWARF',
+     ShowHelpOrError('https://wiki.freepascal.org/DWARF',
         'Help for debug info selection','text/html');
   end;
 end;
@@ -8267,10 +8273,15 @@ begin
   // clear old error lines
   SourceEditorManager.ClearErrorLines;
 
-  Result:=SaveProjectIfChanged;
-  if Result in [mrAbort, mrCancel] then begin
-    DebugLn('Error: (lazarus) TMainIDE.DoBuildLazarus: failed because saving failed');
-    exit;
+  if SourceEditorManager.SomethingModified then begin
+    Result:=IDEMessageDialog(lisSaveChanges, lisSaveAllModified,
+      mtconfirmation, [mbYes, mbNo, mbCancel]);
+    if Result in [mrAbort, mrCancel] then begin
+      DebugLn('Error: (lazarus) TMainIDE.DoBuildLazarus: failed because saving failed');
+      exit;
+    end;
+    if Result = mrYes then
+      DoSaveAll([sfCheckAmbiguousFiles,sfSaveNonProjectFiles]);
   end;
 
   Result:=DoCallModalFunctionHandler(lihtLazarusBuilding);
@@ -12918,6 +12929,7 @@ var
   NewSource, PasCode: TCodeBuffer;
   NewX, NewY, NewTopLine, BlockTopLine, BlockBottomLine: integer;
   SrcEdit: TSourceEditor;
+  FindFlags: TFindSmartFlags;
 begin
   SrcEdit:=SourceEditorManager.SenderToEditor(Sender);
   if SrcEdit=nil then begin
@@ -12939,8 +12951,12 @@ begin
                                           NewSource,NewX,NewY);
     exit;
   end;
+  FindFlags := DefaultFindSmartFlags;
+  if CodeToolsOpts.FindDeclarationInComments then
+    Include(FindFlags, fsfSearchInComments);
   AllowMouseLink := CodeToolBoss.FindDeclaration(
-    ActiveUnitInfo.Source,X,Y,NewSource,NewX,NewY,NewTopLine,BlockTopLine,BlockBottomLine);
+    ActiveUnitInfo.Source,X,Y,NewSource,NewX,NewY,NewTopLine,BlockTopLine,BlockBottomLine,
+    FindFlags);
 end;
 
 procedure TMainIDE.SrcNotebookReadOnlyChanged(Sender: TObject);

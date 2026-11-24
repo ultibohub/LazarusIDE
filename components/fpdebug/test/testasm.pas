@@ -41,6 +41,7 @@ var
   DisAss: TX86AsmDecoder;
   Process: TDummyProcess;
   IgnoreSizeWordPtr: Boolean;
+  IgnoreDecodeLen: Boolean; // used for decoding invalid codes => they do not have a defined length
 
 
   procedure TestDis(AName: String; AData: String; AExp: String);
@@ -55,7 +56,8 @@ var
 
     //debugln([AName, ' // ', codeBytes, '  ', asmInstr, '  ', p-@s[1] ,' == ',Length(AData)]);
 
-    AssertEquals(AName+' Cnt bytes', Length(AData), p-@s[1]);
+    if not IgnoreDecodeLen then
+      AssertEquals(AName+' Cnt bytes', Length(AData), p-@s[1]);
 
     s := Trim(LowerCase(asmInstr));
     AExp := LowerCase(AExp);
@@ -80,15 +82,18 @@ var
     r := TRegExpr.Create('(\$)0+([0-9a-fA-F])');
 
     s := StringReplace(s, '  ', ' ', [rfReplaceAll]);  // space
+    s := StringReplace(s, '  ', ' ', [rfReplaceAll]);  // space
     s := StringReplace(s, ',  ', ',', [rfReplaceAll]); // space
     s := StringReplace(s, ', ', ',', [rfReplaceAll]); // space
     s := r.Replace(s, '$1$2', True);
 
     AExp := StringReplace(AExp, '  ', ' ', [rfReplaceAll]);  // space
+    AExp := StringReplace(AExp, '  ', ' ', [rfReplaceAll]);  // space
     AExp := StringReplace(AExp, ',  ', ',', [rfReplaceAll]); // space
     AExp := StringReplace(AExp, ', ', ',', [rfReplaceAll]); // space
     AExp := r.Replace(AExp, '$1$2', True);
     r.Free;
+
     AssertEquals(AName+' asm ', AExp, s);
 
 
@@ -101,6 +106,8 @@ begin
   DisAss := TX86AsmDecoder.Create(Process);
   try
 
+  {%region 64 bit}
+
   TestDis('callq  0x7ffbf0250860',       #$e8#$99#$da#$04#$00        ,  'call +$0004DA99');
   TestDis('callq  *0x6c1ec(%rip)',       #$ff#$15#$ec#$c1#$06#$00    ,  'call qword ptr [rip+$0006C1EC]');
   TestDis('rex.W callq *0x724f2(%rip)',  #$48#$ff#$15#$f2#$24#$07#$00,  'call qword ptr [rip+$000724F2]');
@@ -108,6 +115,24 @@ begin
   TestDis('callq  *0x100(%rbx)',         #$ff#$93#$00#$01#$00#$00    ,  'call qword ptr [rbx+$00000100]');
   TestDis('callq  *(%rax)',              #$ff#$10                    ,  'call qword ptr [rax]');
 
+  {%region push, pop}
+  TestDis('push rax', #$50, 'push rax'); // push rax
+  TestDis('push rcx', #$51, 'push rcx'); // push rcx
+  TestDis('push rdx', #$52, 'push rdx'); // push rdx
+  TestDis('pop rax',  #$58, 'pop rax');  // pop rax
+  TestDis('pop rcx',  #$59, 'pop rcx');  // pop rcx
+  TestDis('pop rdx',  #$5A, 'pop rdx');  // pop rdx
+
+  TestDis('push r8', #$41#$50, 'push r8'); // pop r8
+  TestDis('push r8', #$41#$51, 'push r9'); // pop r8
+  TestDis('pop r9',  #$41#$58, 'pop r8');  // pop r9
+  TestDis('pop r9',  #$41#$59, 'pop r9');  // pop r9
+
+  TestDis('push cx',  #$66#$51,    'push cx');
+  TestDis('push r8w', #$66#$41#$50, 'push r8w');
+  {%endregion push, pop}
+
+  {%region ADD - ** arguments **}
   TestDis('add al,$05',                  #$04#$05,                             'add al,$05');
   TestDis('add ah,$05',                  #$80#$c4#$05,                         'add ah,$05');
   TestDis('add ax,$05',                  #$66#$05#$05#$00,                     'add ax,$05');
@@ -259,6 +284,7 @@ begin
   TestDis('add [esi*4+edx+$123456],ax',  #$67#$66#$01#$84#$b2#$56#$34#$12#$00, 'add [esi*4+edx+$123456],ax');
   TestDis('add [esi*4+edx+$123456],eax', #$67#$01#$84#$b2#$56#$34#$12#$00,     'add [esi*4+edx+$123456],eax');
   TestDis('add [esi*4+edx+$123456],rax', #$67#$48#$01#$84#$b2#$56#$34#$12#$00, 'add [esi*4+edx+$123456],rax');
+  {%endregion ADD - ** arguments **}
 
   TestDis('xadd [rdi],ax',                #$66#$0f#$c1#$07,                    'xadd [rdi],ax');
   TestDis('lock xadd [rdi],ax',           #$f0#$66#$0f#$c1#$07,                'lock xadd [rdi],ax');
@@ -271,6 +297,10 @@ begin
   TestDis('mov    ah,bh',               #$88#$fc,                     'mov ah,bh');
   TestDis('mov    al,bl',               #$88#$d8,                     'mov al,bl');
 
+  TestDis('nopw', #$66#$2e#$0f#$1f#$84#$00#$00#$00#$00#$00, 'nop word ptr (cs:)[rax+rax+$0]'); // nopw   %cs:0x0(%rax,%rax,1)
+  TestDis('nopl', #$0f#$1f#$00, 'nop dword ptr [rax]'); // nopl   (%rax)
+
+  {%region XMM/YMM }
   TestDis('vmovmskpd ecx,xmm1',     #$C5#$F9#$50#$C9,             'vmovmskpd ecx,xmm1');
   TestDis('vmovmskpd ecx,ymm1',     #$C5#$FD#$50#$C9,             'vmovmskpd ecx,ymm1');
   TestDis('vmovmskps ecx,xmm1',     #$C5#$F8#$50#$C9,             'vmovmskps ecx,xmm1');
@@ -460,38 +490,6 @@ begin
   TestDis('vdppd  xmm3,xmm4,[rdi],$05', #$c4#$e3#$59#$41#$1f#$05,             'vdppd xmm3,xmm4,[rdi],$05');
   TestDis('vdppd  xmm3,xmm1,[rsi],$07', #$c4#$e3#$71#$41#$1e#$07,             'vdppd xmm3,xmm1,[rsi],$07');
 
-
-  TestDis('popcnt rcx,rdx',             #$f3#$48#$0f#$b8#$ca,          'popcnt rcx,rdx');
-  TestDis('popcnt ecx,edx',             #$f3#$0f#$b8#$ca,              'popcnt ecx,edx');
-  TestDis('popcnt cx,dx',               #$f3#$66#$0f#$b8#$ca,          'popcnt cx,dx');
-  TestDis('popcnt rcx,[rdx]',           #$f3#$48#$0f#$b8#$0a,          'popcnt rcx,[rdx]');
-  TestDis('popcnt ecx,[rdx]',           #$f3#$0f#$b8#$0a,              'popcnt ecx,[rdx]');
-  TestDis('popcnt cx,[rdx]',            #$f3#$66#$0f#$b8#$0a,          'popcnt cx,[rdx]');
-  TestDis('bsf    rcx,rdx',             #$48#$0f#$bc#$ca,              'bsf rcx,rdx');
-  TestDis('bsf    ecx,edx',             #$0f#$bc#$ca,                  'bsf ecx,edx');
-  TestDis('bsf    cx,dx',               #$66#$0f#$bc#$ca,              'bsf cx,dx');
-  TestDis('bsf    rcx,[rdx]',           #$48#$0f#$bc#$0a,              'bsf rcx,[rdx]');
-  TestDis('bsf    ecx,[rdx]',           #$0f#$bc#$0a,                  'bsf ecx,[rdx]');
-  TestDis('bsf    cx,[rdx]',            #$66#$0f#$bc#$0a,              'bsf cx,[rdx]');
-  TestDis('bsr    rcx,rdx',             #$48#$0f#$bd#$ca,              'bsr rcx,rdx');
-  TestDis('bsr    ecx,edx',             #$0f#$bd#$ca,                  'bsr ecx,edx');
-  TestDis('bsr    cx,dx',               #$66#$0f#$bd#$ca,              'bsr cx,dx');
-  TestDis('bsr    rcx,[rdx]',           #$48#$0f#$bd#$0a,              'bsr rcx,[rdx]');
-  TestDis('bsr    ecx,[rdx]',           #$0f#$bd#$0a,                  'bsr ecx,[rdx]');
-  TestDis('bsr    cx,[rdx]',            #$66#$0f#$bd#$0a,              'bsr cx,[rdx]');
-  TestDis('tzcnt  rcx,rdx',             #$f3#$48#$0f#$bc#$ca,          'tzcnt rcx,rdx');
-  TestDis('tzcnt  ecx,edx',             #$f3#$0f#$bc#$ca,              'tzcnt ecx,edx');
-  TestDis('tzcnt  cx,dx',               #$66#$f3#$0f#$bc#$ca,          'tzcnt cx,dx');
-  TestDis('tzcnt  rcx,[rdx]',           #$f3#$48#$0f#$bc#$0a,          'tzcnt rcx,[rdx]');
-  TestDis('tzcnt  ecx,[rdx]',           #$f3#$0f#$bc#$0a,              'tzcnt ecx,[rdx]');
-  TestDis('tzcnt  cx,[rdx]',            #$66#$f3#$0f#$bc#$0a,          'tzcnt cx,[rdx]');
-  TestDis('lzcnt  rcx,rdx',             #$f3#$48#$0f#$bd#$ca,          'lzcnt rcx,rdx');
-  TestDis('lzcnt  ecx,edx',             #$f3#$0f#$bd#$ca,              'lzcnt ecx,edx');
-  TestDis('lzcnt  cx,dx',               #$66#$f3#$0f#$bd#$ca,          'lzcnt cx,dx');
-  TestDis('lzcnt  rcx,[rdx]',           #$f3#$48#$0f#$bd#$0a,          'lzcnt rcx,[rdx]');
-  TestDis('lzcnt  ecx,[rdx]',           #$f3#$0f#$bd#$0a,              'lzcnt ecx,[rdx]');
-  TestDis('lzcnt  cx,[rdx]',            #$66#$f3#$0f#$bd#$0a,          'lzcnt cx,[rdx]');
-
   TestDis('pextrw edx,mm1,$2',                   #$0f#$c5#$d1#$02,                         'pextrw edx,mm1,$2');
   TestDis('pextrw edx,xmm2,$2',                  #$66#$0f#$c5#$d2#$02,                     'pextrw edx,xmm2,$2');
   TestDis('pextrw edx,xmm2,$2',                  #$66#$0f#$3a#$15#$d2#$02,                 'pextrw edx,xmm2,$2');
@@ -510,9 +508,10 @@ begin
   TestDis('vpextrb BYTE PTR [rsi-$F],xmm1,$2',   #$c4#$e3#$79#$14#$4e#$f1#$02,             'vpextrb BYTE PTR [rsi-$F],xmm1,$2');
   TestDis('vpextrd DWORD PTR [rsi-$F],xmm2,$2',  #$c4#$e3#$79#$16#$56#$f1#$02,             'vpextrd DWORD PTR [rsi-$F],xmm2,$2');
   TestDis('vpextrq QWORD PTR [rsi-$F],xmm3,$2',  #$c4#$e3#$f9#$16#$5e#$f1#$02,             'vpextrq QWORD PTR [rsi-$F],xmm3,$2');
+  {%endregion XMM/YMM }
 
+  {%region XMM/YMM }
   IgnoreSizeWordPtr := True;
-
   TestDis('aesdeclast xmm2,XMMWORD PTR [rdi]',         #$66#$0f#$38#$df#$17,                     'aesdeclast xmm2,XMMWORD PTR [rdi]');
   TestDis('aesdeclast xmm2,XMMWORD PTR [rsi]',         #$66#$0f#$38#$df#$16,                     'aesdeclast xmm2,XMMWORD PTR [rsi]');
   TestDis('aesdeclast xmm2,XMMWORD PTR [rbx]',         #$66#$0f#$38#$df#$13,                     'aesdeclast xmm2,XMMWORD PTR [rbx]');
@@ -755,8 +754,42 @@ begin
   TestDis('vcvtps2ph YMMWORD PTR [eax+edi+$3],zmm3,$35',  #$67#$62#$f3#$7d#$48#$1d#$9c#$07#$03#$00#$00#$00#$35, 'vcvtps2ph YMMWORD PTR [eax+edi+$3],zmm3,$35');
   TestDis('vcvtps2ph YMMWORD PTR [eax+edi+$3],zmm11,$35', #$67#$62#$73#$7d#$48#$1d#$9c#$07#$03#$00#$00#$00#$35, 'vcvtps2ph YMMWORD PTR [eax+edi+$3],zmm11,$35');
   IgnoreSizeWordPtr := False;
+  {%endregion XMM/YMM }
 
+  {%region popcnt, bsf, bsr, tzcnt}
+  TestDis('popcnt rcx,rdx',             #$f3#$48#$0f#$b8#$ca,          'popcnt rcx,rdx');
+  TestDis('popcnt ecx,edx',             #$f3#$0f#$b8#$ca,              'popcnt ecx,edx');
+  TestDis('popcnt cx,dx',               #$f3#$66#$0f#$b8#$ca,          'popcnt cx,dx');
+  TestDis('popcnt rcx,[rdx]',           #$f3#$48#$0f#$b8#$0a,          'popcnt rcx,[rdx]');
+  TestDis('popcnt ecx,[rdx]',           #$f3#$0f#$b8#$0a,              'popcnt ecx,[rdx]');
+  TestDis('popcnt cx,[rdx]',            #$f3#$66#$0f#$b8#$0a,          'popcnt cx,[rdx]');
+  TestDis('bsf    rcx,rdx',             #$48#$0f#$bc#$ca,              'bsf rcx,rdx');
+  TestDis('bsf    ecx,edx',             #$0f#$bc#$ca,                  'bsf ecx,edx');
+  TestDis('bsf    cx,dx',               #$66#$0f#$bc#$ca,              'bsf cx,dx');
+  TestDis('bsf    rcx,[rdx]',           #$48#$0f#$bc#$0a,              'bsf rcx,[rdx]');
+  TestDis('bsf    ecx,[rdx]',           #$0f#$bc#$0a,                  'bsf ecx,[rdx]');
+  TestDis('bsf    cx,[rdx]',            #$66#$0f#$bc#$0a,              'bsf cx,[rdx]');
+  TestDis('bsr    rcx,rdx',             #$48#$0f#$bd#$ca,              'bsr rcx,rdx');
+  TestDis('bsr    ecx,edx',             #$0f#$bd#$ca,                  'bsr ecx,edx');
+  TestDis('bsr    cx,dx',               #$66#$0f#$bd#$ca,              'bsr cx,dx');
+  TestDis('bsr    rcx,[rdx]',           #$48#$0f#$bd#$0a,              'bsr rcx,[rdx]');
+  TestDis('bsr    ecx,[rdx]',           #$0f#$bd#$0a,                  'bsr ecx,[rdx]');
+  TestDis('bsr    cx,[rdx]',            #$66#$0f#$bd#$0a,              'bsr cx,[rdx]');
+  TestDis('tzcnt  rcx,rdx',             #$f3#$48#$0f#$bc#$ca,          'tzcnt rcx,rdx');
+  TestDis('tzcnt  ecx,edx',             #$f3#$0f#$bc#$ca,              'tzcnt ecx,edx');
+  TestDis('tzcnt  cx,dx',               #$66#$f3#$0f#$bc#$ca,          'tzcnt cx,dx');
+  TestDis('tzcnt  rcx,[rdx]',           #$f3#$48#$0f#$bc#$0a,          'tzcnt rcx,[rdx]');
+  TestDis('tzcnt  ecx,[rdx]',           #$f3#$0f#$bc#$0a,              'tzcnt ecx,[rdx]');
+  TestDis('tzcnt  cx,[rdx]',            #$66#$f3#$0f#$bc#$0a,          'tzcnt cx,[rdx]');
+  TestDis('lzcnt  rcx,rdx',             #$f3#$48#$0f#$bd#$ca,          'lzcnt rcx,rdx');
+  TestDis('lzcnt  ecx,edx',             #$f3#$0f#$bd#$ca,              'lzcnt ecx,edx');
+  TestDis('lzcnt  cx,dx',               #$66#$f3#$0f#$bd#$ca,          'lzcnt cx,dx');
+  TestDis('lzcnt  rcx,[rdx]',           #$f3#$48#$0f#$bd#$0a,          'lzcnt rcx,[rdx]');
+  TestDis('lzcnt  ecx,[rdx]',           #$f3#$0f#$bd#$0a,              'lzcnt ecx,[rdx]');
+  TestDis('lzcnt  cx,[rdx]',            #$66#$f3#$0f#$bd#$0a,          'lzcnt cx,[rdx]');
+  {%endregion popcnt, bsf, bsr, tzcnt}
 
+  {%region rdrand}
   TestDis('rdrand r13w', #$66#$41#$0f#$c7#$f5,               'rdrand r13w');
   TestDis('rdrand r13d', #$41#$0f#$c7#$f5,                   'rdrand r13d');
   TestDis('rdrand r13' , #$49#$0f#$c7#$f5,                   'rdrand r13' );
@@ -793,10 +826,154 @@ begin
   TestDis('rdseed rbp' , #$48#$0f#$c7#$fd,                   'rdseed rbp' );
   TestDis('rdseed ebp' , #$0f#$c7#$fd,                       'rdseed ebp' );
   TestDis('rdseed bp'  , #$66#$0f#$c7#$fd,                   'rdseed bp'  );
+  {%endregion rdrand}
+
+  {%region nop}
+  TestDis('nop DWORD PTR [rax+rax+$0]',    #$0f#$1f#$44#$00#$00,              'nop DWORD PTR [rax+rax+$0]');
+  TestDis('nop DWORD PTR [rbp+$010]',      #$0f#$1f#$65#$10,                  'nop DWORD PTR [rbp+$010]');
+  TestDis('nop DWORD PTR [rsp+$010]',      #$0f#$1f#$64#$24#$10,              'nop DWORD PTR [rsp+$010]');
+  TestDis('nop WORD PTR [rsp+$10]',        #$66#$0f#$1f#$64#$24#$10,          'nop WORD PTR [rsp+$10]');
+  TestDis('nop DWORD PTR [rip+$0]',        #$0f#$1f#$25#$00#$00#$00#$00,      'nop DWORD PTR [rip+$0]');
+  TestDis('nop DWORD PTR [rsp+$010]',      #$0f#$1f#$a4#$24#$10#$00#$00#$00,  'nop DWORD PTR [rsp+$010]');
+  {%endregion nop}
+
+  {%region shrd}
+  IgnoreSizeWordPtr := True;
+  TestDis('shrd ax,di,$7',                  #$66#$0f#$ac#$f8#$07,  'shrd ax,di,$7');
+  TestDis('shrd WORD PTR [rax],di,$7',      #$66#$0f#$ac#$38#$07,  'shrd WORD PTR [rax],di,$7');
+  TestDis('shrd eax,edi,$7',                #$0f#$ac#$f8#$07,      'shrd eax,edi,$7');
+  TestDis('shrd DWORD PTR [rax],edi,$7',    #$0f#$ac#$38#$07,      'shrd DWORD PTR [rax],edi,$7');
+  TestDis('shrd rax,rdi,$7',                #$48#$0f#$ac#$f8#$07,  'shrd rax,rdi,$7');
+  TestDis('shrd QWORD PTR [rax],rdi,$7',    #$48#$0f#$ac#$38#$07,  'shrd QWORD PTR [rax],rdi,$7');
+  TestDis('shrd ax,di,cl',                  #$66#$0f#$ad#$f8,      'shrd ax,di,cl');
+  TestDis('shrd WORD PTR [rax],di,cl',      #$66#$0f#$ad#$38,      'shrd WORD PTR [rax],di,cl');
+  TestDis('shrd eax,edi,cl',                #$0f#$ad#$f8,          'shrd eax,edi,cl');
+  TestDis('shrd DWORD PTR [rax],edi,cl',    #$0f#$ad#$38,          'shrd DWORD PTR [rax],edi,cl');
+  TestDis('shrd rax,rdi,cl',                #$48#$0f#$ad#$f8,      'shrd rax,rdi,cl');
+  TestDis('shrd QWORD PTR [rax],rdi,cl',    #$48#$0f#$ad#$38,      'shrd QWORD PTR [rax],rdi,cl');
+  TestDis('shld ax,di,$7',                  #$66#$0f#$a4#$f8#$07,  'shld ax,di,$7');
+  TestDis('shld WORD PTR [rax],di,$7',      #$66#$0f#$a4#$38#$07,  'shld WORD PTR [rax],di,$7');
+  TestDis('shld eax,edi,$7',                #$0f#$a4#$f8#$07,      'shld eax,edi,$7');
+  TestDis('shld DWORD PTR [rax],edi,$7',    #$0f#$a4#$38#$07,      'shld DWORD PTR [rax],edi,$7');
+  TestDis('shld rax,rdi,$7',                #$48#$0f#$a4#$f8#$07,  'shld rax,rdi,$7');
+  TestDis('shld QWORD PTR [rax],rdi,$7',    #$48#$0f#$a4#$38#$07,  'shld QWORD PTR [rax],rdi,$7');
+  TestDis('shld ax,di,cl',                  #$66#$0f#$a5#$f8,      'shld ax,di,cl');
+  TestDis('shld WORD PTR [rax],di,cl',      #$66#$0f#$a5#$38,      'shld WORD PTR [rax],di,cl');
+  TestDis('shld eax,edi,cl',                #$0f#$a5#$f8,          'shld eax,edi,cl');
+  TestDis('shld DWORD PTR [rax],edi,cl',    #$0f#$a5#$38,          'shld DWORD PTR [rax],edi,cl');
+  TestDis('shld rax,rdi,cl',                #$48#$0f#$a5#$f8,      'shld rax,rdi,cl');
+  TestDis('shld QWORD PTR [rax],rdi,cl',    #$48#$0f#$a5#$38,      'shld QWORD PTR [rax],rdi,cl');
+  IgnoreSizeWordPtr := False;
+  {%endregion shrd}
+
+  {%region fucom,fucompp}
+  // NOTE: 2nd operand "st(0)" is just decorative / does not exist (is implicit)
+  TestDis('fucom st(0)',     #$dd#$e0,  'fucom st(0),st(0)');
+  TestDis('fucom st(3)',     #$dd#$e3,  'fucom st(3),st(0)');
+  TestDis('fucom st(7)',     #$dd#$e7,  'fucom st(7),st(0)');
+  TestDis('fucomp st(0)',    #$dd#$e8,  'fucomp st(0)');
+  TestDis('fucompp',         #$da#$e9,  'fucompp');
+  {%endregion fucom,fucompp}
+
+  {%region psrlq}
+  TestDis('psrlq mm1,$01',          #$0f#$73#$d1#$01,  'psrlq mm1,$01');
+  TestDis('psllq mm1,$01',          #$0f#$73#$f1#$01,  'psllq mm1,$01');
+  TestDis('psrlq xmm1,$1',          #$66#$0f#$73#$d1#$01,  'psrlq xmm1,$1');
+  TestDis('psrldq xmm1,$01',        #$66#$0f#$73#$d9#$01,  'psrldq xmm1,$01');
+  TestDis('psllq xmm1,$1',          #$66#$0f#$73#$f1#$01,  'psllq xmm1,$1');
+  TestDis('pslldq xmm1,$01',        #$66#$0f#$73#$f9#$01,  'pslldq xmm1,$01');
+  TestDis('vpsrlq xmm1,xmm2,$1',    #$c5#$f1#$73#$d2#$01,  'vpsrlq xmm1,xmm2,$1');
+  TestDis('vpsrlq ymm1,ymm2,$1',    #$c5#$f5#$73#$d2#$01,  'vpsrlq ymm1,ymm2,$1');
+  {%endregion psrlq}
+
+  {%region vextractf128}
+  TestDis('vextractf128 xmm1,ymm0,$1',                  #$c4#$e3#$7d#$19#$c1#$01,  'vextractf128 xmm1,ymm0,$1');
+  TestDis('vextractf128 XMMWORD PTR [ecx],ymm0,$01',    #$67#$c4#$e3#$7d#$19#$01#$01,  'vextractf128 XMMWORD PTR [ecx],ymm0,$01');
+  TestDis('vextractf128 XMMWORD PTR [rcx],ymm0,$01',    #$c4#$e3#$7d#$19#$01#$01,  'vextractf128 XMMWORD PTR [rcx],ymm0,$01');
+  TestDis('vextracti128 xmm1,ymm0,$1',                  #$c4#$e3#$7d#$39#$c1#$01,  'vextracti128 xmm1,ymm0,$1');
+  TestDis('vextracti128 XMMWORD PTR [ecx],ymm0,$01',    #$67#$c4#$e3#$7d#$39#$01#$01,  'vextracti128 XMMWORD PTR [ecx],ymm0,$01');
+  TestDis('vextracti128 XMMWORD PTR [rcx],ymm0,$01',    #$c4#$e3#$7d#$39#$01#$01,  'vextracti128 XMMWORD PTR [rcx],ymm0,$01');
+  {%endregion vextractf128}
+
+  {%region UDn}
+  TestDis('ud0 eax,edi',    #$0f#$ff#$c7,  'ud0 eax,edi');
+  TestDis('ud1 eax,edi',    #$0f#$b9#$c7,  'ud1 eax,edi');
+  TestDis('ud2',            #$0f#$0b,  'ud2');
+  {%endregion UDn}
+
+  {%region mulx}
+  TestDis('mulx rax,rax,rcx',                #$c4#$e2#$fb#$f6#$c1,  'mulx rax,rax,rcx');
+  TestDis('mulx eax,eax,ecx',                #$c4#$e2#$7b#$f6#$c1,  'mulx eax,eax,ecx');
+  TestDis('mulx rbx,rax,rcx',                #$c4#$e2#$fb#$f6#$d9,  'mulx rbx,rax,rcx');
+  TestDis('mulx rbx,r9,rcx',                 #$c4#$e2#$b3#$f6#$d9,  'mulx rbx,r9,rcx');
+  IgnoreSizeWordPtr := True;
+  TestDis('mulx rax,rax,QWORD PTR [rcx]',    #$c4#$e2#$fb#$f6#$01,  'mulx rax,rax,QWORD PTR [rcx]');
+  IgnoreSizeWordPtr := False;
+  {%endregion mulx}
+
+  {%region vpbroadcastd}
+  IgnoreSizeWordPtr := True;
+  TestDis('vbroadcasti128 ymm0,XMMWORD PTR [rcx]',    #$c4#$e2#$7d#$5a#$01,      'vbroadcasti128 ymm0,XMMWORD PTR [rcx]');
+  TestDis('vbroadcasti128 ymm0,XMMWORD PTR [rcx]',    #$c4#$e2#$7d#$5a#$01,      'vbroadcasti128 ymm0,XMMWORD PTR [rcx]');
+  TestDis('vpbroadcastd ymm0,DWORD PTR [rcx]',        #$c4#$e2#$7d#$58#$01,      'vpbroadcastd ymm0,DWORD PTR [rcx]');
+  TestDis('vbroadcasti128 ymm0,XMMWORD PTR [ecx]',    #$67#$c4#$e2#$7d#$5a#$01,  'vbroadcasti128 ymm0,XMMWORD PTR [ecx]');
+  TestDis('vbroadcasti128 ymm0,XMMWORD PTR [ecx]',    #$67#$c4#$e2#$7d#$5a#$01,  'vbroadcasti128 ymm0,XMMWORD PTR [ecx]');
+  TestDis('vpbroadcastd ymm0,DWORD PTR [ecx]',        #$67#$c4#$e2#$7d#$58#$01,  'vpbroadcastd ymm0,DWORD PTR [ecx]');
+  TestDis('vbroadcasti128 ymm0,XMMWORD PTR [rax]',    #$c4#$e2#$7d#$5a#$00,      'vbroadcasti128 ymm0,XMMWORD PTR [rax]');
+  TestDis('vbroadcasti128 ymm0,XMMWORD PTR [rax]',    #$c4#$e2#$7d#$5a#$00,      'vbroadcasti128 ymm0,XMMWORD PTR [rax]');
+  TestDis('vpbroadcastd ymm0,DWORD PTR [rax]',        #$c4#$e2#$7d#$58#$00,      'vpbroadcastd ymm0,DWORD PTR [rax]');
+  IgnoreSizeWordPtr := False;
+  {%endregion vpbroadcastd}
+
+  {%region bad opcodes}
+  IgnoreDecodeLen := True;
+  // Note: the exact representation of the error may change. The test may need to be adjusted in that case
+  TestDis('(bad)',    #$0f#$73#$d9#$01,  '**group14**');
+  TestDis('(bad)',    #$0f#$73#$f9#$01,  '**group14**');
+  TestDis('(bad)',    #$f2#$0f#$73#$d1#$01,  '?repne?**group14**');
+  TestDis('(bad)',    #$f3#$0f#$73#$d9#$01,  '?rep?**group14**');
+  TestDis('(bad)',    #$0f#$73#$c1#$01,  '**group14**');
+  TestDis('data16 (bad)',    #$66#$0f#$73#$e1#$01,  '**group14**');
+  IgnoreDecodeLen := False;
+  {%endregion bad opcodes}
+
+  {%region CRC}
+  IgnoreSizeWordPtr := True;
+  TestDis('crc32 eax,cl',                       #$f2#$0f#$38#$f0#$c1,                          'crc32 eax,cl');
+  TestDis('crc32 eax,cx',                       #$66#$f2#$0f#$38#$f1#$c1,                      'crc32 eax,cx');
+  TestDis('crc32 eax,ecx',                      #$f2#$0f#$38#$f1#$c1,                          'crc32 eax,ecx');
+  TestDis('crc32 eax,DWORD PTR ds:$012341234',  #$f2#$0f#$38#$f1#$04#$25#$34#$12#$34#$12,      'crc32 eax,DWORD PTR [$012341234]');
+  TestDis('crc32 eax,DWORD PTR [rax]',          #$f2#$0f#$38#$f1#$00,                          'crc32 eax,DWORD PTR [rax]');
+  TestDis('crc32 rax,cl',                       #$f2#$48#$0f#$38#$f0#$c1,                      'crc32 rax,cl');
+  TestDis('crc32 rax,rcx',                      #$f2#$48#$0f#$38#$f1#$c1,                      'crc32 rax,rcx');
+  TestDis('crc32 rax,QWORD PTR ds:$012341234',  #$f2#$48#$0f#$38#$f1#$04#$25#$34#$12#$34#$12,  'crc32 rax,QWORD PTR [$012341234]');
+  TestDis('crc32 rax,QWORD PTR [rax]',          #$f2#$48#$0f#$38#$f1#$00,                      'crc32 rax,QWORD PTR [rax]');
+  TestDis('crc32 ebx,cl',                       #$f2#$0f#$38#$f0#$d9,                          'crc32 ebx,cl');
+  TestDis('crc32 ebx,cx',                       #$66#$f2#$0f#$38#$f1#$d9,                      'crc32 ebx,cx');
+  TestDis('crc32 ebx,ecx',                      #$f2#$0f#$38#$f1#$d9,                          'crc32 ebx,ecx');
+  TestDis('crc32 ebx,DWORD PTR ds:$012341234',  #$f2#$0f#$38#$f1#$1c#$25#$34#$12#$34#$12,      'crc32 ebx,DWORD PTR [$012341234]');
+  TestDis('crc32 ebx,DWORD PTR [rcx]',          #$f2#$0f#$38#$f1#$19,                          'crc32 ebx,DWORD PTR [rcx]');
+  TestDis('crc32 rbx,cl',                       #$f2#$48#$0f#$38#$f0#$d9,                      'crc32 rbx,cl');
+  TestDis('crc32 rbx,rcx',                      #$f2#$48#$0f#$38#$f1#$d9,                      'crc32 rbx,rcx');
+  TestDis('crc32 rbx,QWORD PTR ds:$012341234',  #$f2#$48#$0f#$38#$f1#$1c#$25#$34#$12#$34#$12,  'crc32 rbx,QWORD PTR [$012341234]');
+  TestDis('crc32 rbx,QWORD PTR [rcx]',          #$f2#$48#$0f#$38#$f1#$19,                      'crc32 rbx,QWORD PTR [rcx]');
+  IgnoreSizeWordPtr := False;
+  {%endregion CRC}
+
+  {%region clflush}
+  IgnoreSizeWordPtr := True;
+  TestDis('clflush BYTE PTR [eax]',                  #$67#$0f#$ae#$38,      'clflush BYTE PTR [eax]');
+  TestDis('clflushopt BYTE PTR [rax]',               #$66#$0f#$ae#$38,      'clflushopt BYTE PTR [rax]');
+  TestDis('clflushopt BYTE PTR [rsp]',               #$66#$0f#$ae#$3c#$24,  'clflushopt BYTE PTR [rsp]');
+  TestDis('clflushopt BYTE PTR [rip+$012345678]',    #$66#$0f#$ae#$3d#$78#$56#$34#$12,  'clflushopt BYTE PTR [rip+$012345678]');
+  IgnoreSizeWordPtr := False;
+  {%endregion flflush}
+
+  {%endregion 64 bit}
 
 
 
-
+  {%region 32 bit}
   Process.NewMode := dm32;
 
   TestDis('call   0x77cf4d10',           #$e8#$67#$70#$fc#$ff        ,  'call -$00038F99');
@@ -807,6 +984,19 @@ begin
   TestDis('call   *(%edx)',              #$ff#$12                    ,  'call dword ptr [edx]');
   TestDis('call   *0x7c(%ebx)',          #$ff#$53#$7c                ,  'call dword ptr [ebx+$7C]');
 
+  {%region push, pop}
+  TestDis('32: push eax', #$50, 'push eax'); // push eax
+  TestDis('32: push ecx', #$51, 'push ecx'); // push ecx
+  TestDis('32: push edx', #$52, 'push edx'); // push edx
+  TestDis('32: pop eax',  #$58, 'pop eax');  // pop eax
+  TestDis('32: pop ecx',  #$59, 'pop ecx');  // pop ecx
+  TestDis('32: pop edx',  #$5A, 'pop edx');  // pop edx
+
+  TestDis('32: push ax',  #$66#$50,    'push ax');
+  TestDis('32: push cx',  #$66#$51,    'push cx');
+  {%endregion push, pop}
+
+  {%region ADD - ** arguments **}
   TestDis('add al,$05',                  #$04#$05,                             'add al,$05');
   TestDis('add ah,$05',                  #$80#$c4#$05,                         'add ah,$05');
   TestDis('add ax,$05',                  #$66#$05#$05#$00,                     'add ax,$05');
@@ -888,6 +1078,7 @@ begin
   TestDis('add [esi*4+edx+$123456],ah',  #$00#$a4#$b2#$56#$34#$12#$00,         'add [esi*4+edx+$123456],ah');
   TestDis('add [esi*4+edx+$123456],ax',  #$66#$01#$84#$b2#$56#$34#$12#$00,     'add [esi*4+edx+$123456],ax');
   TestDis('add [esi*4+edx+$123456],eax', #$01#$84#$b2#$56#$34#$12#$00,         'add [esi*4+edx+$123456],eax');
+  {%endregion ADD - ** arguments **}
 
   TestDis('xadd [edi],ax',                #$66#$0f#$c1#$07,                    'xadd [edi],ax');
   TestDis('lock xadd [edi],ax',           #$f0#$66#$0f#$c1#$07,                'lock xadd [edi],ax');
@@ -899,6 +1090,10 @@ begin
   TestDis('mov    ah,bh',               #$88#$fc,                     'mov ah,bh');
   TestDis('mov    al,bl',               #$88#$d8,                     'mov al,bl');
 
+  TestDis('32: nopw', #$66#$2e#$0f#$1f#$84#$00#$00#$00#$00#$00, 'nop word ptr cs:[eax+eax+$0]'); // nopw   %cs:0x0(%rax,%rax,1)
+  TestDis('32: nopl', #$0f#$1f#$00, 'nop dword ptr [eax]'); // nopl   (%rax)
+
+  {%region XMM/YMM }
   TestDis('vmovmskpd ecx,xmm1',     #$C5#$F9#$50#$C9,             'vmovmskpd ecx,xmm1');
   TestDis('vmovmskpd ecx,ymm1',     #$C5#$FD#$50#$C9,             'vmovmskpd ecx,ymm1');
   TestDis('vmovmskps ecx,xmm1',     #$C5#$F8#$50#$C9,             'vmovmskps ecx,xmm1');
@@ -1074,28 +1269,6 @@ begin
   TestDis('vdppd  xmm3,xmm4,[edi],$05', #$c4#$e3#$59#$41#$1f#$05,             'vdppd xmm3,xmm4,[edi],$05');
   TestDis('vdppd  xmm3,xmm1,[esi],$07', #$c4#$e3#$71#$41#$1e#$07,             'vdppd xmm3,xmm1,[esi],$07');
 
-
-  TestDis('popcnt ecx,edx',             #$f3#$0f#$b8#$ca,             'popcnt ecx,edx');
-  TestDis('popcnt cx,dx',               #$f3#$66#$0f#$b8#$ca,         'popcnt cx,dx');
-  TestDis('popcnt ecx,[edx]',           #$f3#$0f#$b8#$0a,             'popcnt ecx,[edx]');
-  TestDis('popcnt cx,[edx]',            #$f3#$66#$0f#$b8#$0a,         'popcnt cx,[edx]');
-  TestDis('bsf    ecx,edx',             #$0f#$bc#$ca,                 'bsf ecx,edx');
-  TestDis('bsf    cx,dx',               #$66#$0f#$bc#$ca,             'bsf cx,dx');
-  TestDis('bsf    ecx,[edx]',           #$0f#$bc#$0a,                 'bsf ecx,[edx]');
-  TestDis('bsf    cx,[edx]',            #$66#$0f#$bc#$0a,             'bsf cx,[edx]');
-  TestDis('bsr    ecx,edx',             #$0f#$bd#$ca,                 'bsr ecx,edx');
-  TestDis('bsr    cx,dx',               #$66#$0f#$bd#$ca,             'bsr cx,dx');
-  TestDis('bsr    ecx,[edx]',           #$0f#$bd#$0a,                 'bsr ecx,[edx]');
-  TestDis('bsr    cx,[edx]',            #$66#$0f#$bd#$0a,             'bsr cx,[edx]');
-  TestDis('tzcnt  ecx,edx',             #$f3#$0f#$bc#$ca,             'tzcnt ecx,edx');
-  TestDis('tzcnt  cx,dx',               #$66#$f3#$0f#$bc#$ca,         'tzcnt cx,dx');
-  TestDis('tzcnt  ecx,[edx]',           #$f3#$0f#$bc#$0a,             'tzcnt ecx,[edx]');
-  TestDis('tzcnt  cx,[edx]',            #$66#$f3#$0f#$bc#$0a,         'tzcnt cx,[edx]');
-  TestDis('lzcnt  ecx,edx',             #$f3#$0f#$bd#$ca,             'lzcnt ecx,edx');
-  TestDis('lzcnt  cx,dx',               #$66#$f3#$0f#$bd#$ca,         'lzcnt cx,dx');
-  TestDis('lzcnt  ecx,[edx]',           #$f3#$0f#$bd#$0a,             'lzcnt ecx,[edx]');
-  TestDis('lzcnt  cx,[edx]',            #$66#$f3#$0f#$bd#$0a,         'lzcnt cx,[edx]');
-
   TestDis('pextrw edx,mm1,$2',                  #$0f#$c5#$d1#$02,                       'pextrw edx,mm1,$2');
   TestDis('pextrw edx,xmm2,$2',                 #$66#$0f#$c5#$d2#$02,                   'pextrw edx,xmm2,$2');
   TestDis('pextrw edx,xmm2,$2',                 #$66#$0f#$3a#$15#$d2#$02,               'pextrw edx,xmm2,$2');
@@ -1110,9 +1283,10 @@ begin
   TestDis('pextrd DWORD PTR [esi-$F],xmm2,$2',  #$66#$0f#$3a#$16#$56#$f1#$02,           'pextrd DWORD PTR [esi-$F],xmm2,$2');
   TestDis('vpextrb BYTE PTR [esi-$F],xmm1,$2',  #$c4#$e3#$79#$14#$4e#$f1#$02,           'vpextrb BYTE PTR [esi-$F],xmm1,$2');
   TestDis('vpextrd DWORD PTR [esi-$F],xmm2,$2', #$c4#$e3#$79#$16#$56#$f1#$02,           'vpextrd DWORD PTR [esi-$F],xmm2,$2');
+  {%endregion XMM/YMM }
 
+  {%region XMM/YMM }
   IgnoreSizeWordPtr := True;
-
   TestDis('aesdeclast xmm2,XMMWORD PTR [edi]',         #$66#$0f#$38#$df#$17,                   'aesdeclast xmm2,XMMWORD PTR [edi]');
   TestDis('aesdeclast xmm2,XMMWORD PTR [esi]',         #$66#$0f#$38#$df#$16,                   'aesdeclast xmm2,XMMWORD PTR [esi]');
   TestDis('aesdeclast xmm2,XMMWORD PTR [ebx]',         #$66#$0f#$38#$df#$13,                   'aesdeclast xmm2,XMMWORD PTR [ebx]');
@@ -1218,9 +1392,32 @@ begin
   TestDis('vcvtps2ph XMMWORD PTR [eax*2+edi+$3],ymm3,$35', #$c4#$e3#$7d#$1d#$5c#$47#$03#$35,               'vcvtps2ph XMMWORD PTR [eax*2+edi+$3],ymm3,$35');
   TestDis('vcvtps2ph YMMWORD PTR [eax*2+edi+$3],zmm3,$35', #$62#$f3#$7d#$48#$1d#$9c#$47#$03#$00#$00#$00#$35, 'vcvtps2ph YMMWORD PTR [eax*2+edi+$3],zmm3,$35');
   IgnoreSizeWordPtr := False;
+  {%endregion XMM/YMM }
 
+  {%region popcnt, bsf, bsr, tzcnt}
+  TestDis('popcnt ecx,edx',             #$f3#$0f#$b8#$ca,             'popcnt ecx,edx');
+  TestDis('popcnt cx,dx',               #$f3#$66#$0f#$b8#$ca,         'popcnt cx,dx');
+  TestDis('popcnt ecx,[edx]',           #$f3#$0f#$b8#$0a,             'popcnt ecx,[edx]');
+  TestDis('popcnt cx,[edx]',            #$f3#$66#$0f#$b8#$0a,         'popcnt cx,[edx]');
+  TestDis('bsf    ecx,edx',             #$0f#$bc#$ca,                 'bsf ecx,edx');
+  TestDis('bsf    cx,dx',               #$66#$0f#$bc#$ca,             'bsf cx,dx');
+  TestDis('bsf    ecx,[edx]',           #$0f#$bc#$0a,                 'bsf ecx,[edx]');
+  TestDis('bsf    cx,[edx]',            #$66#$0f#$bc#$0a,             'bsf cx,[edx]');
+  TestDis('bsr    ecx,edx',             #$0f#$bd#$ca,                 'bsr ecx,edx');
+  TestDis('bsr    cx,dx',               #$66#$0f#$bd#$ca,             'bsr cx,dx');
+  TestDis('bsr    ecx,[edx]',           #$0f#$bd#$0a,                 'bsr ecx,[edx]');
+  TestDis('bsr    cx,[edx]',            #$66#$0f#$bd#$0a,             'bsr cx,[edx]');
+  TestDis('tzcnt  ecx,edx',             #$f3#$0f#$bc#$ca,             'tzcnt ecx,edx');
+  TestDis('tzcnt  cx,dx',               #$66#$f3#$0f#$bc#$ca,         'tzcnt cx,dx');
+  TestDis('tzcnt  ecx,[edx]',           #$f3#$0f#$bc#$0a,             'tzcnt ecx,[edx]');
+  TestDis('tzcnt  cx,[edx]',            #$66#$f3#$0f#$bc#$0a,         'tzcnt cx,[edx]');
+  TestDis('lzcnt  ecx,edx',             #$f3#$0f#$bd#$ca,             'lzcnt ecx,edx');
+  TestDis('lzcnt  cx,dx',               #$66#$f3#$0f#$bd#$ca,         'lzcnt cx,dx');
+  TestDis('lzcnt  ecx,[edx]',           #$f3#$0f#$bd#$0a,             'lzcnt ecx,[edx]');
+  TestDis('lzcnt  cx,[edx]',            #$66#$f3#$0f#$bd#$0a,         'lzcnt cx,[edx]');
+  {%endregion popcnt, bsf, bsr, tzcnt}
 
-
+  {%region rdrand}
   TestDis('rdrand eax', #$0f#$c7#$f0,                   'rdrand eax');
   TestDis('rdrand ax' , #$66#$0f#$c7#$f0,               'rdrand ax');
   TestDis('rdseed eax', #$0f#$c7#$f8,                   'rdseed eax');
@@ -1237,47 +1434,177 @@ begin
   TestDis('rdrand bp' , #$66#$0f#$c7#$f5,               'rdrand bp');
   TestDis('rdseed ebp', #$0f#$c7#$fd,                   'rdseed ebp');
   TestDis('rdseed bp' , #$66#$0f#$c7#$fd,               'rdseed bp');
+  {%endregion rdrand}
+
+  {%region nop}
+  TestDis('nop DWORD PTR [eax+eax+$0]',    #$0f#$1f#$44#$00#$00,              'nop DWORD PTR [eax+eax+$0]');
+  TestDis('nop DWORD PTR [ebp+$010]',      #$0f#$1f#$65#$10,                  'nop DWORD PTR [ebp+$010]');
+  TestDis('nop DWORD PTR [esp+$010]',      #$0f#$1f#$64#$24#$10,              'nop DWORD PTR [esp+$010]');
+  TestDis('nop WORD PTR [esp+$10]',        #$66#$0f#$1f#$64#$24#$10,          'nop WORD PTR [esp+$10]');
+//TODO: maybe should be expecting: [ds:0] ?
+  TestDis('nop DWORD PTR ds:$0',           #$0f#$1f#$25#$00#$00#$00#$00,      'nop DWORD PTR [$0]');
+  TestDis('nop DWORD PTR [esp+$010]',      #$0f#$1f#$a4#$24#$10#$00#$00#$00,  'nop DWORD PTR [esp+$010]');
+  {%endregion nop}
+
+  {%region shrd}
+  IgnoreSizeWordPtr := True;
+  TestDis('shrd ax,di,$7',                  #$66#$0f#$ac#$f8#$07,  'shrd ax,di,$7');
+  TestDis('shrd WORD PTR [eax],di,$7',      #$66#$0f#$ac#$38#$07,  'shrd WORD PTR [eax],di,$7');
+  TestDis('shrd eax,edi,$7',                #$0f#$ac#$f8#$07,      'shrd eax,edi,$7');
+  TestDis('shrd DWORD PTR [eax],edi,$7',    #$0f#$ac#$38#$07,      'shrd DWORD PTR [eax],edi,$7');
+  TestDis('shrd ax,di,cl',                  #$66#$0f#$ad#$f8,      'shrd ax,di,cl');
+  TestDis('shrd WORD PTR [eax],di,cl',      #$66#$0f#$ad#$38,      'shrd WORD PTR [eax],di,cl');
+  TestDis('shrd eax,edi,cl',                #$0f#$ad#$f8,          'shrd eax,edi,cl');
+  TestDis('shrd DWORD PTR [eax],edi,cl',    #$0f#$ad#$38,          'shrd DWORD PTR [eax],edi,cl');
+  TestDis('shld ax,di,$7',                  #$66#$0f#$a4#$f8#$07,  'shld ax,di,$7');
+  TestDis('shld WORD PTR [eax],di,$7',      #$66#$0f#$a4#$38#$07,  'shld WORD PTR [eax],di,$7');
+  TestDis('shld eax,edi,$7',                #$0f#$a4#$f8#$07,      'shld eax,edi,$7');
+  TestDis('shld DWORD PTR [eax],edi,$7',    #$0f#$a4#$38#$07,      'shld DWORD PTR [eax],edi,$7');
+  TestDis('shld ax,di,cl',                  #$66#$0f#$a5#$f8,      'shld ax,di,cl');
+  TestDis('shld WORD PTR [eax],di,cl',      #$66#$0f#$a5#$38,      'shld WORD PTR [eax],di,cl');
+  TestDis('shld eax,edi,cl',                #$0f#$a5#$f8,          'shld eax,edi,cl');
+  TestDis('shld DWORD PTR [eax],edi,cl',    #$0f#$a5#$38,          'shld DWORD PTR [eax],edi,cl');
+  IgnoreSizeWordPtr := False;
+  {%endregion shrd}
+
+  {%region fucom,fucompp}
+  // NOTE: 2nd operand "st(0)" is just decorative / does not exist (is implicit)
+  TestDis('fucom st(0)',     #$dd#$e0,  'fucom st(0),st(0)');
+  TestDis('fucom st(3)',     #$dd#$e3,  'fucom st(3),st(0)');
+  TestDis('fucom st(7)',     #$dd#$e7,  'fucom st(7),st(0)');
+  TestDis('fucomp st(0)',    #$dd#$e8,  'fucomp st(0)');
+  TestDis('fucompp',         #$da#$e9,  'fucompp');
+  {%endregion fucom,fucompp}
+
+  {%region psrlq}
+  TestDis('psrlq mm1,$01',          #$0f#$73#$d1#$01,  'psrlq mm1,$01');
+  TestDis('psllq mm1,$01',          #$0f#$73#$f1#$01,  'psllq mm1,$01');
+  TestDis('psrlq xmm1,$1',          #$66#$0f#$73#$d1#$01,  'psrlq xmm1,$1');
+  TestDis('psrldq xmm1,$01',        #$66#$0f#$73#$d9#$01,  'psrldq xmm1,$01');
+  TestDis('psllq xmm1,$1',          #$66#$0f#$73#$f1#$01,  'psllq xmm1,$1');
+  TestDis('pslldq xmm1,$01',        #$66#$0f#$73#$f9#$01,  'pslldq xmm1,$01');
+  TestDis('vpsrlq xmm1,xmm2,$1',    #$c5#$f1#$73#$d2#$01,  'vpsrlq xmm1,xmm2,$1');
+  TestDis('vpsrlq ymm1,ymm2,$1',    #$c5#$f5#$73#$d2#$01,  'vpsrlq ymm1,ymm2,$1');
+  {%endregion psrlq}
+
+  {%region vextractf128}
+  TestDis('vextractf128 xmm1,ymm0,$1              ',    #$c4#$e3#$7d#$19#$c1#$01,  'vextractf128 xmm1,ymm0,$1');
+  TestDis('vextractf128 XMMWORD PTR [ecx],ymm0,$01',    #$c4#$e3#$7d#$19#$01#$01,  'vextractf128 XMMWORD PTR [ecx],ymm0,$01');
+  TestDis('vextracti128 xmm1,ymm0,$1              ',    #$c4#$e3#$7d#$39#$c1#$01,  'vextracti128 xmm1,ymm0,$1');
+  TestDis('vextracti128 XMMWORD PTR [ecx],ymm0,$01',    #$c4#$e3#$7d#$39#$01#$01,  'vextracti128 XMMWORD PTR [ecx],ymm0,$01');
+  {%endregion vextractf128}
+
+  {%region vextractf128}
+  TestDis('ud0 eax,edi',    #$0f#$ff#$c7,  'ud0 eax,edi');
+  TestDis('ud1 eax,edi',    #$0f#$b9#$c7,  'ud1 eax,edi');
+  TestDis('ud2',    #$0f#$0b,  'ud2');
+  {%endregion vextractf128}
+
+  {%region mulx}
+  TestDis('mulx eax,eax,ecx',                                       #$c4#$e2#$fb#$f6#$c1,  'mulx eax,eax,ecx');
+  TestDis('mulx eax,eax,ecx',                                       #$c4#$e2#$7b#$f6#$c1,  'mulx eax,eax,ecx');
+  TestDis('mulx ebx,eax,ecx',                                       #$c4#$e2#$fb#$f6#$d9,  'mulx ebx,eax,ecx');
+  IgnoreSizeWordPtr := True;
+  TestDis('mulx eax,eax,DWORD PTR [ecx]',                           #$c4#$e2#$fb#$f6#$01,  'mulx eax,eax,DWORD PTR [ecx]');
+  IgnoreSizeWordPtr := False;
+  {%endregion mulx}
+
+  {%region vpbroadcastd}
+  IgnoreSizeWordPtr := True;
+  TestDis('vbroadcasti128 ymm0,XMMWORD PTR [ecx]',    #$c4#$e2#$7d#$5a#$01,  'vbroadcasti128 ymm0,XMMWORD PTR [ecx]');
+  TestDis('vbroadcasti128 ymm0,XMMWORD PTR [ecx]',    #$c4#$e2#$7d#$5a#$01,  'vbroadcasti128 ymm0,XMMWORD PTR [ecx]');
+  TestDis('vpbroadcastd ymm0,DWORD PTR [ecx]',        #$c4#$e2#$7d#$58#$01,  'vpbroadcastd ymm0,DWORD PTR [ecx]');
+  IgnoreSizeWordPtr := False;
+  {%endregion vpbroadcastd}
+
+  {%region bad opcodes}
+  IgnoreDecodeLen := True;
+  // Note: the exact representation of the error may change. The test may need to be adjusted in that case
+  TestDis('(bad)',    #$0f#$73#$d9#$01,  '**group14**');
+  TestDis('(bad)',    #$0f#$73#$f9#$01,  '**group14**');
+  TestDis('(bad)',    #$f2#$0f#$73#$d1#$01,  '?repne?**group14**');
+  TestDis('(bad)',    #$f3#$0f#$73#$d9#$01,  '?rep?**group14**');
+  TestDis('(bad)',    #$0f#$73#$c1#$01,  '**group14**');
+  TestDis('data16 (bad)',    #$66#$0f#$73#$e1#$01,  '**group14**');
+  IgnoreDecodeLen := False;
+  {%endregion bad opcodes}
+
+  {%region CRC}
+  IgnoreSizeWordPtr := True;
+  TestDis('crc32 eax,cl',                         #$f2#$0f#$38#$f0#$c1,                  'crc32 eax,cl');
+  TestDis('crc32 eax,cx',                         #$66#$f2#$0f#$38#$f1#$c1,              'crc32 eax,cx');
+  TestDis('crc32 eax,ecx',                        #$f2#$0f#$38#$f1#$c1,                  'crc32 eax,ecx');
+  TestDis('crc32 eax,DWORD PTR ds:$012341234',    #$f2#$0f#$38#$f1#$05#$34#$12#$34#$12,  'crc32 eax,DWORD PTR [$012341234]');
+  TestDis('crc32 eax,DWORD PTR [eax]',            #$f2#$0f#$38#$f1#$00,                  'crc32 eax,DWORD PTR [eax]');
+  TestDis('crc32 ebx,cl',                         #$f2#$0f#$38#$f0#$d9,                  'crc32 ebx,cl');
+  TestDis('crc32 ebx,cx',                         #$66#$f2#$0f#$38#$f1#$d9,              'crc32 ebx,cx');
+  TestDis('crc32 ebx,ecx',                        #$f2#$0f#$38#$f1#$d9,                  'crc32 ebx,ecx');
+  TestDis('crc32 ebx,DWORD PTR ds:$012341234',    #$f2#$0f#$38#$f1#$1d#$34#$12#$34#$12,  'crc32 ebx,DWORD PTR [$012341234]');
+  TestDis('crc32 ebx,DWORD PTR [ecx]',            #$f2#$0f#$38#$f1#$19,                  'crc32 ebx,DWORD PTR [ecx]');
+  IgnoreSizeWordPtr := False;
+  {%endregion CRC}
+
+  {%region clflush}
+  IgnoreSizeWordPtr := True;
+  TestDis('clflush BYTE PTR [eax]',               #$0f#$ae#$38,          'clflush BYTE PTR [eax]');
+  TestDis('clflushopt BYTE PTR [eax]',            #$66#$0f#$ae#$38,      'clflushopt BYTE PTR [eax]');
+  TestDis('clflushopt BYTE PTR [esp]',            #$66#$0f#$ae#$3c#$24,  'clflushopt BYTE PTR [esp]');
+  TestDis('clflushopt BYTE PTR ds:$012345678',    #$66#$0f#$ae#$3d#$78#$56#$34#$12,  'clflushopt BYTE PTR [$012345678]');
+  IgnoreSizeWordPtr := False;
+  {%endregion flflush}
+
+  {%endregion 32 bit}
 
 
+  {%region 64 bit ONLY}
   Process.NewMode := dm64;
 
-  TestDis('push rax', #$50, 'push rax'); // push rax
-  TestDis('push rcx', #$51, 'push rcx'); // push rcx
-  TestDis('push rdx', #$52, 'push rdx'); // push rdx
-  TestDis('pop rax',  #$58, 'pop rax');  // pop rax
-  TestDis('pop rcx',  #$59, 'pop rcx');  // pop rcx
-  TestDis('pop rdx',  #$5A, 'pop rdx');  // pop rdx
 
-  TestDis('push r8', #$41#$50, 'push r8'); // pop r8
-  TestDis('push r8', #$41#$51, 'push r9'); // pop r8
-  TestDis('pop r9',  #$41#$58, 'pop r8');  // pop r9
-  TestDis('pop r9',  #$41#$59, 'pop r9');  // pop r9
+  {%endregion 64 bit}
 
-  TestDis('push cx',  #$66#$51,    'push cx');
-  TestDis('push r8w', #$66#$41#$50, 'push r8w');
-
-
-  TestDis('nopw', #$66#$2e#$0f#$1f#$84#$00#$00#$00#$00#$00, 'nop word ptr (cs:)[rax+rax+$0]'); // nopw   %cs:0x0(%rax,%rax,1)
-  TestDis('nopl', #$0f#$1f#$00, 'nop dword ptr [rax]'); // nopl   (%rax)
-
+  {%region 32 bit ONLY }
   Process.NewMode := dm32;
-
-  TestDis('32: push eax', #$50, 'push eax'); // push eax
-  TestDis('32: push ecx', #$51, 'push ecx'); // push ecx
-  TestDis('32: push edx', #$52, 'push edx'); // push edx
-  TestDis('32: pop eax',  #$58, 'pop eax');  // pop eax
-  TestDis('32: pop ecx',  #$59, 'pop ecx');  // pop ecx
-  TestDis('32: pop edx',  #$5A, 'pop edx');  // pop edx
-
-  TestDis('32: push ax',  #$66#$50,    'push ax');
-  TestDis('32: push cx',  #$66#$51,    'push cx');
 
   TestDis('32: inc eax', #$40, 'inc eax');
   TestDis('32: inc ecx', #$41, 'inc ecx');
 
-  TestDis('32: nopw', #$66#$2e#$0f#$1f#$84#$00#$00#$00#$00#$00, 'nop word ptr cs:[eax+eax+$0]'); // nopw   %cs:0x0(%rax,%rax,1)
-  TestDis('32: nopl', #$0f#$1f#$00, 'nop dword ptr [eax]'); // nopl   (%rax)
+  TestDis('aam $0a',    #$d4#$0a,  'aam $0a');
+  TestDis('aam $01',    #$d4#$01,  'aam $01');
+  TestDis('aad $0a',    #$d5#$0a,  'aad $0a');
+  TestDis('aad $01',    #$d5#$01,  'aad $01');
 
+  {%region VEX.W1 / no Rax in 32bit }
+  IgnoreSizeWordPtr := True;
+  TestDis('andn ebx,eax,ecx',                                       #$c4#$e2#$78#$f2#$d9,  'andn ebx,eax,ecx');
+  TestDis('andn ebx,eax,ecx',                                       #$c4#$e2#$f8#$f2#$d9,  'andn ebx,eax,ecx');
+  TestDis('andn ebx,eax,DWORD PTR [ecx]',                           #$c4#$e2#$78#$f2#$19,  'andn ebx,eax,DWORD PTR [ecx]');
+  TestDis('andn ebx,eax,DWORD PTR [ecx]',                           #$c4#$e2#$f8#$f2#$19,  'andn ebx,eax,DWORD PTR [ecx]');
+  TestDis('bzhi ebx,ecx,eax',                                       #$c4#$e2#$78#$f5#$d9,  'bzhi ebx,ecx,eax');
+  TestDis('bzhi ebx,ecx,eax',                                       #$c4#$e2#$f8#$f5#$d9,  'bzhi ebx,ecx,eax');
+  TestDis('bextr ebx,ecx,eax',                                      #$c4#$e2#$78#$f7#$d9,  'bextr ebx,ecx,eax');
+  TestDis('bextr ebx,ecx,eax',                                      #$c4#$e2#$f8#$f7#$d9,  'bextr ebx,ecx,eax');
+  TestDis('shlx ebx,ecx,eax',                                       #$c4#$e2#$79#$f7#$d9,  'shlx ebx,ecx,eax');
+  TestDis('shlx ebx,ecx,eax',                                       #$c4#$e2#$f9#$f7#$d9,  'shlx ebx,ecx,eax');
+  TestDis('shrx ebx,ecx,eax',                                       #$c4#$e2#$7b#$f7#$d9,  'shrx ebx,ecx,eax');
+  TestDis('shrx ebx,ecx,eax',                                       #$c4#$e2#$fb#$f7#$d9,  'shrx ebx,ecx,eax');
+  TestDis('sarx ebx,ecx,eax',                                       #$c4#$e2#$7a#$f7#$d9,  'sarx ebx,ecx,eax');
+  TestDis('sarx ebx,ecx,eax',                                       #$c4#$e2#$fa#$f7#$d9,  'sarx ebx,ecx,eax');
+  TestDis('pdep ebx,eax,ecx',                                       #$c4#$e2#$7b#$f5#$d9,  'pdep ebx,eax,ecx');
+  TestDis('pdep ebx,eax,ecx',                                       #$c4#$e2#$fb#$f5#$d9,  'pdep ebx,eax,ecx');
+  TestDis('pext ebx,eax,ecx',                                       #$c4#$e2#$7a#$f5#$d9,  'pext ebx,eax,ecx');
+  TestDis('pext ebx,eax,ecx',                                       #$c4#$e2#$fa#$f5#$d9,  'pext ebx,eax,ecx');
+  TestDis('rorx ebx,ecx,$04',                                       #$c4#$e3#$03#$f0#$d9#$04,  'rorx ebx,ecx,$04');
+  TestDis('rorx ebx,ecx,$04',                                       #$c4#$e3#$83#$f0#$d9#$04,  'rorx ebx,ecx,$04');
+  TestDis('blsr eax,ecx',                                           #$c4#$e2#$78#$f3#$c9,  'blsr eax,ecx');
+  TestDis('blsr eax,ecx',                                           #$c4#$e2#$f8#$f3#$c9,  'blsr eax,ecx');
+  TestDis('blsmsk eax,ecx',                                         #$c4#$e2#$78#$f3#$d1,  'blsmsk eax,ecx');
+  TestDis('blsmsk eax,ecx',                                         #$c4#$e2#$f8#$f3#$d1,  'blsmsk eax,ecx');
+  TestDis('blsi eax,ecx',                                           #$c4#$e2#$78#$f3#$d9,  'blsi eax,ecx');
+  TestDis('blsi eax,ecx',                                           #$c4#$e2#$f8#$f3#$d9,  'blsi eax,ecx');
+  IgnoreSizeWordPtr := False;
+  {%endregion VEX.W1 }
+
+  {%endregion 32 bit}
 
   finally
   DisAss.Free;

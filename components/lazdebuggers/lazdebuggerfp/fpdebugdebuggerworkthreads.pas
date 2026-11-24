@@ -839,11 +839,26 @@ var
   StringAnsiSetLenAddress, StringAnsiDecRefAddress: TDBGPtr;
   StringWideSetLenAddress, StringWideDecRefAddress: TDBGPtr;
   ParRes: Boolean;
+  dummyFB: TDbgFrameBoundaryInfo;
 begin
   Result := False;
+  if (FDebugger.DbgController.IsTerminating)
+  then begin
+    AnError := CreateError(fpErrAnyError, ['Error in function execution']);
+    exit;
+  end;
+
   AnError := NoError;
   if FExpressionScope = nil then
     exit;
+
+  if FDebugger.DbgController.CurrentThread.GetFrameBoundaryInfoAtInstructionPointer(dummyFB) in
+     [bkBeforePrologue, bkInPrologue, bkInEpilogue, bkAfterEpiloge]
+  then begin
+    AnError := CreateError(fpErrAnyError, ['Can''t call functions while in pro/epiloque']);
+    exit;
+  end;
+
 (*
    AFunctionValue =>  TFpValueDwarfSubroutine  // gotten from <== TFpSymbolDwarfDataProc.GetValueObject;
                    .DataSympol = TFpSymbolDwarfDataProc  from which we were created
@@ -1057,7 +1072,7 @@ begin
 
     try
       if (ASelfValue <> nil) then begin
-        if not CallContext.AddParam(SelfTypeSym.TypeInfo, ASelfValue) then begin
+        if not CallContext.AddParam(SelfTypeSym.TypeInfo, ASelfValue, True) then begin
           DebugLn(FPDBG_FUNCCALL or DBG_WARNINGS, 'Internal error for self');
           AnError := CallContext.LastError;
           exit;
@@ -1096,7 +1111,9 @@ begin
       FDebugger.BeforeWatchEval(CallContext);
       FDebugger.RunProcessLoop(not FAllowFunctionsAllThread);
 
-      if not CallContext.IsValid then begin
+      if (not CallContext.IsValid) or
+         (FDebugger.DbgController.IsTerminating)
+      then begin
         DebugLn(FPDBG_FUNCCALL or DBG_WARNINGS, ['Error in call ',CallContext.Message]);
         //ReturnMessage := CallContext.Message;
         AnError := CallContext.LastError;

@@ -2195,7 +2195,8 @@ begin
   Result:=GenExpr;
   if GenExpr='' then exit;
   if Count=0 then exit;
-  if CompareIdentifiers(PChar(GenExpr),PChar(SpecializedType))=0 then begin
+  if (SpecializedType<>'') and
+  (CompareIdentifiers(PChar(GenExpr),PChar(SpecializedType))=0) then begin
     i:=Pos('=',SpecializedType);
     if i<1 then exit;
     delete(SpecializedType,1,i);
@@ -8770,6 +8771,14 @@ var
         if MatchUses or MatchInFile then begin
           // search in search paths
           Code:=FindUnitSource(AUnitName,UnitInFilename,false,StartPos);
+          if (Code<>nil)
+              and (CompareFilenames(Code.Filename,TargetFilename)<>0)
+              and (not FilenameIsAbsolute(TargetFilename))
+              and Assigned(OnFindUsedUnit) then
+          begin
+            // target is a new virtual unit, which can be hidden by a file on disk
+            Code:=OnFindUsedUnit(Self,AUnitName,UnitInFilename);
+          end;
           if (Code<>nil) and (CompareFilenames(Code.Filename,TargetFilename)=0) then
           begin
             // found matching uses
@@ -10781,6 +10790,11 @@ begin
       GetAtom,' CurPos.EndPos=',dbgs(CurPos.EndPos),' EndPos=',dbgs(EndPos));
     {$ENDIF}
     IsEnd := (CurPos.EndPos>EndPos) or (CurExprType.Desc=xtNone);
+    if not IsEnd then begin
+      // << and >>
+      if ReadShiftOperator and (CurPos.EndPos>EndPos) then
+        IsEnd:=true;
+    end;
     if not IsEnd then
       IsBinOpMissing := not WordIsBinaryOperator.DoItCaseInsensitive(Src,CurPos.StartPos,
         CurPos.EndPos-CurPos.StartPos)
